@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Testbench.Cli/Testbench.Cli.csproj" />
+    <Project Path="src/Testbench.Core/Testbench.Core.csproj" />
+    <Project Path="src/Testbench.Gui/Testbench.Gui.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Testbench.Core.Tests/Testbench.Core.Tests.csproj" />
+  </Folder>
+</Solution>
