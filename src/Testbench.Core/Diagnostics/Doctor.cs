@@ -31,16 +31,18 @@ public static class Doctor
         CheckDir(checks, "resultRoot", machine.ResultRoot, required: false);
         CheckDir(checks, "prefs.backupDir", machine.Prefs.BackupDir, required: false);
 
+        var store = new RunStore(machine);
+
         // ---- versions -----------------------------------------------------
         if (machine.Versions.Count == 0)
         {
             checks.Add(new Check("versions", CheckLevel.Fail, "Keine Version eingetragen.",
-                "tb versions add <version>"));
+                "tb versions scan --add"));
         }
         foreach (var v in machine.Versions)
         {
             var dir = machine.GameDir(v.Id);
-            var exe = Path.Combine(dir, "7DaysToDie.exe");
+            var exe = Path.Combine(dir, VersionScanner.ExeName);
             if (File.Exists(exe))
             {
                 var harmony = Directory.Exists(Path.Combine(dir, "Mods", "0_TFP_Harmony"));
@@ -49,6 +51,8 @@ public static class Doctor
                     : new Check($"version {v.Id}", CheckLevel.Warn,
                         $"{dir}: kein Mods\\0_TFP_Harmony - DLL-Mods laden dort nicht.",
                         "Installation pruefen oder 0_TFP_Harmony nachlegen."));
+
+                CheckIdentity(checks, machine, store, v, dir);
             }
             else
             {
@@ -144,7 +148,6 @@ public static class Doctor
         }
 
         // ---- pending human work --------------------------------------------
-        var store = new RunStore(machine);
         var pending = store.PendingVisual();
         if (pending.Count > 0)
             checks.Add(new Check("stage2", CheckLevel.Warn,
@@ -153,6 +156,42 @@ public static class Doctor
                 "tb verify --run <id> --visual ok|fail"));
 
         return checks;
+    }
+
+    /// <summary>
+    /// Asks whether an installation is still the version it is registered as.
+    /// Three independent statements exist: the id someone typed, the build in
+    /// MicrosoftGame.Config, and the "INF Version:" line of the last actual run.
+    /// When they disagree, every report about that version is wrong, and nothing
+    /// in a log would ever say so.
+    /// </summary>
+    private static void CheckIdentity(List<Check> checks, MachineConfig machine, RunStore store,
+        GameVersion v, string dir)
+    {
+        var area = $"version {v.Id}";
+        var build = VersionScanner.ReadBuild(dir);
+
+        if (v.Build is not null && build is not null && v.Build != build)
+            checks.Add(new Check(area, CheckLevel.Warn,
+                $"Installation hat sich geaendert: eingetragen war Build {v.Build}, dort liegt {build}. " +
+                "Vermutlich hat Steam den Ordner aktualisiert.",
+                "Ergebnisse fuer diese Version noch einmal fahren; Build mit 'tb versions remove/add --path' neu eintragen."));
+
+        var decoded = build is null ? null : VersionScanner.IdFromBuild(build);
+        if (decoded is not null && !string.Equals(decoded, v.Id, StringComparison.OrdinalIgnoreCase))
+            checks.Add(new Check(area, CheckLevel.Warn,
+                $"Der Ordner ist als '{v.Id}' eingetragen, die Installation meldet sich als {decoded} (Build {build}).",
+                "Eintrag korrigieren, sonst meldet der Report eine Version, die nie getestet wurde."));
+
+        // What the game itself said, last time it ran. The only statement that
+        // cannot be a naming mistake.
+        var reported = store.All()
+            .FirstOrDefault(r => string.Equals(r.VersionId, v.Id, StringComparison.OrdinalIgnoreCase)
+                                 && r.Analysis.GameVersionShort.Length > 0)?.Analysis.GameVersionShort;
+        if (reported is not null && !string.Equals(reported, $"V {v.Id}", StringComparison.OrdinalIgnoreCase))
+            checks.Add(new Check(area, CheckLevel.Warn,
+                $"Der letzte Lauf unter '{v.Id}' hat sich als '{reported}' gemeldet.",
+                "Eintrag oder Installation pruefen."));
     }
 
     private static void CheckDir(List<Check> checks, string area, string path, bool required)

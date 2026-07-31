@@ -134,7 +134,13 @@
                         <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
                                   DisplayMemberPath="Name" />
 
-                        <TextBlock Text="VERSIONEN" Style="{StaticResource Heading}" Margin="0,6,0,6" />
+                        <Grid Margin="0,6,0,6">
+                            <TextBlock Text="VERSIONEN" Style="{StaticResource Heading}" Margin="0"
+                                       VerticalAlignment="Center" />
+                            <Button Content="verwalten" Click="Versions_Click" HorizontalAlignment="Right"
+                                    Padding="8,2" FontSize="11"
+                                    ToolTip="Installationen suchen, neue Version eintragen, Eintrag entfernen" />
+                        </Grid>
                         <ItemsControl ItemsSource="{Binding Versions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

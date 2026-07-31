@@ -197,3 +197,32 @@ Spielversion, nicht Mod und Variante, sodass eine Adamant-Bestätigung einen
 Lehre für den Port: ein Store, ein typisiertes Modell, geschrieben und gelesen
 von derselben Stelle. `RunStore.ImportGuiVerified` akzeptiert beide
 Schreibweisen, damit alte Einträge nicht verloren gehen.
+
+## 16. Der Ordnername ist keine Versionsangabe
+
+`E:\Games\7DTD-3.0.1` heißt nicht, dass dort 3.0.1 liegt. Ein Ordner wird
+umbenannt, kopiert, oder Steam aktualisiert ihn im Bestand, und der Name bleibt
+stehen. Ein Bench, der Versionen nach Ordnernamen führt, meldet dann ruhig weiter
+Ergebnisse für eine Version, die nie gestartet wurde.
+
+In einer Installation steht die Nummer nirgends als Text: `Assembly-CSharp.dll`
+baut den String erst zur Laufzeit zusammen, eine Suche nach `3.0.1` über den
+ganzen Ordner findet nur EAC- und Steam-Logs. Was es gibt, ist die
+Identity-Version in `MicrosoftGame.Config`, die als
+`1.<major><minor><patch>.<build>` mitgeliefert wird:
+
+| Version | Identity |
+|---|---|
+| 3.0.0 | `1.300.259.0` |
+| 3.0.1 | `1.301.4.0` |
+| 3.1.0 | `1.310.14.0` |
+
+`VersionScanner.IdFromBuild` liest ausschließlich die dreistellige Mitte. Eine
+andere Form gibt `null` zurück, nicht eine plausibel aussehende falsche Antwort;
+dann übernimmt der Ordnername, und die Zeile sagt, dass geraten wurde.
+
+Deshalb gibt es drei Aussagen und einen Vergleich: die eingetragene Id, den Build
+beim Eintragen (`versions[].build`), und die Zeile `INF Version:` des letzten
+echten Laufs, die als einzige keine Namensverwechslung sein kann. `tb doctor`
+stellt sie gegenüber. `tb versions scan` trägt einen Ordner, dessen Name seinem
+Build widerspricht, nicht ohne `--force` ein.

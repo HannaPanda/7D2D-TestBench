@@ -41,6 +41,13 @@ public partial class MainWindow : Window
 
     private void ClearLog_Click(object sender, RoutedEventArgs e) => _vm.LogLines.Clear();
 
+    private void Versions_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new VersionsWindow(_vm.Machine, _vm.MachinePath) { Owner = this };
+        dialog.ShowDialog();
+        if (dialog.Changed) _vm.ReloadVersions();
+    }
+
     private void VisualOk_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as Button)?.Tag is PendingItem item) _vm.Answer(item, true);

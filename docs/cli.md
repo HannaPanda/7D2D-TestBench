@@ -60,18 +60,56 @@ Prüft Pfade, Versionen, Dependency-Quellen, Mod-Quellen, alle regulären Ausdr�
 laufende Spiele, die Laufsperre, die GamePrefs gegen die Goldwerte und offene
 Sichtprüfungen. Exit 2, wenn so kein Lauf stattfinden kann.
 
+Für jede Version vergleicht er außerdem drei voneinander unabhängige Aussagen:
+die eingetragene Id, den Build in `MicrosoftGame.Config` und die Zeile
+`INF Version:` des letzten echten Laufs. Widersprechen sie sich, ist jeder Report
+über diese Version falsch, und kein Log würde das je sagen.
+
 ## Nachschauen
 
 ```bash
 tb versions
 ```
 
+Spalte *Build* ist die Identity-Version aus `MicrosoftGame.Config` der
+Installation. Status `GEAENDERT` heißt: dort liegt ein anderer Build als beim
+Eintragen, der Ordnername stimmt also nicht mehr.
+
+### Versionen finden statt eintippen
+
 ```bash
-tb versions add 3.2.0 --branch v3.2.0
+tb versions scan
 ```
 
-Legt den Zielordner an und druckt den `DepotDownloader`-Befehl. Das Tool lädt
-nichts selbst herunter: Passwort und Steam-Guard-Code gibst du selbst ein.
+Sucht unter `gameRoot` (oder `--root <ordner>`, Standardtiefe 2, `--depth n`)
+nach Installationen und sagt für jede, welche Version sie ist und woher er das
+weiß. Er steigt nicht in eine gefundene Installation hinein.
+
+```bash
+tb versions scan --add
+```
+
+Trägt alles ein, worüber es keinen Zweifel gibt, und notiert für schon
+eingetragene Versionen den Build nach. Ein Ordner, dessen Name seinem Build
+widerspricht, wird **nicht** eingetragen: das ist der Fall, in dem ein Report
+hinterher eine Version behauptet, die nie getestet wurde. Mit `--force` trotzdem.
+
+```bash
+tb versions add --path "E:\Games\7DTD-3.2.0"
+```
+
+Liest die Version aus der Installation. Mit `tb versions add 3.2.0 --path <ordner>`
+gibst du sie selbst vor, mit `tb versions add 3.2.0 --branch v3.2.0` ohne Ordner
+legt er ihn an und druckt den `DepotDownloader`-Befehl. Das Tool lädt nichts
+selbst herunter: Passwort und Steam-Guard-Code gibst du selbst ein.
+
+**Woher die Version kommt.** In einer Installation steht die Versionsnummer
+nirgends als Text; `Assembly-CSharp.dll` baut den String erst zur Laufzeit
+zusammen. Verwertbar ist die Identity-Version in `MicrosoftGame.Config`: 3.0.1
+liefert `1.301.4.0`, 3.1.0 liefert `1.310.14.0`. Nur diese dreistellige Form wird
+gelesen, alles andere fällt auf den Ordnernamen zurück. Die letzte Instanz bleibt
+die Zeile `INF Version:` eines echten Laufs, und genau die vergleicht
+`tb doctor` gegen den Eintrag.
 
 ```bash
 tb mods

@@ -147,12 +147,47 @@ public static class ConfigCommands
     {
         var sub = ctx.Args.Verb(1)?.ToLowerInvariant();
 
+        if (sub is "scan") return VersionsScan(ctx);
+
         if (sub is "add")
         {
-            var id = ctx.Args.Verb(2) ?? ctx.Args.Get("version")
-                     ?? throw new UsageException("Version fehlt: tb versions add <version>");
+            var pathArg = ctx.Args.Get("path");
+            var id = ctx.Args.Verb(2) ?? ctx.Args.Get("version");
 
-            if (ctx.Machine.FindVersion(id) is not null)
+            if (id is null && pathArg is null)
+                throw new UsageException("Version fehlt: tb versions add <version>   oder   tb versions add --path <ordner>");
+
+            // With a folder, the installation is asked what it is instead of the
+            // person being asked to type it correctly.
+            VersionCandidate? found = null;
+            if (pathArg is not null)
+            {
+                var probe = Path.GetFullPath(pathArg);
+                if (!Directory.Exists(probe)) throw new ConfigException($"Ordner fehlt: {probe}");
+                found = VersionScanner.Inspect(probe, ctx.Machine);
+                pathArg = probe;
+
+                if (id is null)
+                {
+                    id = found.ProposedId
+                         ?? throw new ConfigException(
+                             $"In '{probe}' war keine Version zu erkennen. Mit 'tb versions add <version> --path {probe}' selbst angeben.");
+                    ctx.Out.Info($"Erkannt: {id} ({found.Explain()})");
+                }
+
+                if (found.Mismatch && !ctx.Args.Flag("force"))
+                {
+                    ctx.Out.Bad($"'{probe}': {found.Explain()}");
+                    ctx.Out.Info("Das ist die Falle, die jeden Report luegen laesst. Ordner umbenennen, " +
+                                 "oder mit --force und ausdruecklicher --version eintragen.");
+                    return ctx.Out.Finish("versions.add", ExitCodes.SetupError, new
+                    {
+                        dir = probe, mismatch = true, idFromFolder = found.IdFromFolder, idFromBuild = found.IdFromBuild,
+                    });
+                }
+            }
+
+            if (ctx.Machine.FindVersion(id!) is not null)
             {
                 ctx.Out.Warn($"Version '{id}' ist schon eingetragen.");
                 return ctx.Out.Finish("versions.add", ExitCodes.SetupError, new { id, existed = true });
@@ -160,16 +195,32 @@ public static class ConfigCommands
 
             var entry = new GameVersion
             {
-                Id = id,
-                Path = ctx.Args.Get("path"),
+                Id = id!,
+                Path = pathArg,
                 Branch = ctx.Args.Get("branch"),
                 Notes = ctx.Args.Get("notes"),
+                Build = found?.Build,
             };
+
+            // Registering it under the default folder name needs no explicit path.
+            if (entry.Path is not null &&
+                ConfigStore.PathsEqual(entry.Path, Path.Combine(ctx.Machine.GameRoot, $"7DTD-{id}")))
+                entry.Path = null;
+
+            // Without a folder there is still an installation to look at, at the
+            // place the id implies.
+            if (found is null)
+            {
+                var guess = ctx.Machine.GameDir(entry.Id);
+                if (Directory.Exists(guess)) entry.Build = VersionScanner.ReadBuild(guess);
+            }
+
             ctx.Machine.Versions.Add(entry);
             ctx.SaveMachine();
 
-            var dir = ctx.Machine.GameDir(id);
+            var dir = ctx.Machine.GameDir(id!);
             ctx.Out.Good($"Version '{id}' eingetragen: {dir}");
+            if (entry.Build is not null) ctx.Out.Detail($"Build {entry.Build}");
 
             if (!File.Exists(Path.Combine(dir, "7DaysToDie.exe")))
             {
@@ -184,7 +235,7 @@ public static class ConfigCommands
                 ctx.Out.Info("Danach in Mods\\ nur 0_TFP_Harmony lassen; ab dem zweiten Lauf raeumt der Bench selbst.");
             }
 
-            return ctx.Out.Finish("versions.add", ExitCodes.Ok, new { id, dir, branch = entry.Branch });
+            return ctx.Out.Finish("versions.add", ExitCodes.Ok, new { id, dir, branch = entry.Branch, build = entry.Build });
         }
 
         if (sub is "remove" or "rm")
@@ -208,14 +259,128 @@ public static class ConfigCommands
         foreach (var v in ctx.Machine.Versions)
         {
             var dir = ctx.Machine.GameDir(v.Id);
-            var installed = File.Exists(Path.Combine(dir, "7DaysToDie.exe"));
-            rows.Add(new[] { v.Id, installed ? "installiert" : "FEHLT", v.Branch ?? "", dir, v.Notes ?? "" });
-            data.Add(new { id = v.Id, installed, branch = v.Branch, dir, notes = v.Notes });
+            var installed = File.Exists(Path.Combine(dir, VersionScanner.ExeName));
+            var build = installed ? VersionScanner.ReadBuild(dir) : null;
+            var drifted = v.Build is not null && build is not null && v.Build != build;
+
+            rows.Add(new[]
+            {
+                v.Id,
+                installed ? (drifted ? "GEAENDERT" : "installiert") : "FEHLT",
+                build ?? v.Build ?? "",
+                v.Branch ?? "",
+                dir,
+                v.Notes ?? "",
+            });
+            data.Add(new { id = v.Id, installed, build, registeredBuild = v.Build, drifted, branch = v.Branch, dir, notes = v.Notes });
         }
-        ctx.Out.Table(rows, "Version", "Status", "Branch", "Ordner", "Notiz");
-        if (rows.Count == 0) ctx.Out.Warn("Keine Version eingetragen. tb versions add <version>");
+        ctx.Out.Table(rows, "Version", "Status", "Build", "Branch", "Ordner", "Notiz");
+        if (rows.Count == 0)
+            ctx.Out.Warn("Keine Version eingetragen. tb versions scan --add   oder   tb versions add <version>");
 
         return ctx.Out.Finish("versions", ExitCodes.Ok, new { versions = data });
+    }
+
+    /// <summary>
+    /// Looks for installations on disk instead of having their versions typed in.
+    /// Prints what it found and, with --add, registers everything it is sure
+    /// about. Folders whose name contradicts their build are never registered
+    /// silently: that is exactly how a report starts claiming a version it never
+    /// tested.
+    /// </summary>
+    private static int VersionsScan(CommandContext ctx)
+    {
+        var root = ctx.Args.Get("root") ?? ctx.Args.Get("path") ?? ctx.Args.Verb(2) ?? ctx.Machine.GameRoot;
+        root = Path.GetFullPath(root);
+        var depth = int.TryParse(ctx.Args.Get("depth"), out var d) ? d : 2;
+
+        if (!Directory.Exists(root)) throw new ConfigException($"Ordner fehlt: {root}");
+
+        var found = VersionScanner.Scan(root, ctx.Machine, depth);
+        ctx.Out.Info($"Gesucht in {root} (Tiefe {depth}): {found.Count} Installation(en).");
+
+        var rows = found.Select(c => new[]
+        {
+            c.ProposedId ?? "?",
+            c.Registered ? "eingetragen" : c.Mismatch ? "WIDERSPRUCH" : c.ProposedId is null ? "unklar" : "neu",
+            c.Dir,
+            c.Explain(),
+        }).ToList();
+        ctx.Out.Table(rows, "Version", "Status", "Ordner", "Woher");
+
+        var addable = found.Where(c => c is { HasExe: true, Registered: false, ProposedId: not null }
+                                       && (!c.Mismatch || ctx.Args.Flag("force"))).ToList();
+
+        var added = new List<object>();
+        if (ctx.Args.Flag("add"))
+        {
+            // Registered folders whose build was never written down get it now.
+            // Without it the drift check has nothing to compare against.
+            var noted = 0;
+            foreach (var c in found.Where(c => c.Registered && c.Build is not null))
+            {
+                var entry = ctx.Machine.FindVersion(c.RegisteredAs!);
+                if (entry?.Build is not null) continue;
+                entry!.Build = c.Build;
+                noted++;
+            }
+            if (noted > 0) ctx.Out.Detail($"Build fuer {noted} schon eingetragene Version(en) notiert.");
+
+            foreach (var c in addable)
+            {
+                if (ctx.Machine.FindVersion(c.ProposedId!) is not null)
+                {
+                    ctx.Out.Warn($"'{c.ProposedId}' ist schon eingetragen, aber mit einem anderen Ordner. " +
+                                 $"Uebersprungen: {c.Dir}");
+                    continue;
+                }
+
+                var isDefaultDir = ConfigStore.PathsEqual(c.Dir, Path.Combine(ctx.Machine.GameRoot, $"7DTD-{c.ProposedId}"));
+                ctx.Machine.Versions.Add(new GameVersion
+                {
+                    Id = c.ProposedId!,
+                    Path = isDefaultDir ? null : c.Dir,
+                    Build = c.Build,
+                    Branch = $"v{c.ProposedId}",
+                });
+                ctx.Out.Good($"Eingetragen: {c.ProposedId} <- {c.Dir}");
+                added.Add(new { id = c.ProposedId, dir = c.Dir, build = c.Build });
+            }
+
+            if (added.Count > 0 || noted > 0)
+            {
+                ctx.Machine.Versions.Sort((a, b) => string.Compare(a.Id, b.Id, StringComparison.OrdinalIgnoreCase));
+                ctx.SaveMachine();
+            }
+            if (added.Count == 0) ctx.Out.Info("Keine neue Version einzutragen.");
+        }
+        else if (addable.Count > 0)
+        {
+            ctx.Out.Info($"{addable.Count} neu. Mit 'tb versions scan --root \"{root}\" --add' eintragen.");
+        }
+
+        foreach (var c in found.Where(c => c.Mismatch))
+            ctx.Out.Warn($"{c.Dir}: {c.Explain()}. Nicht eingetragen ohne --force.");
+
+        return ctx.Out.Finish("versions.scan", ExitCodes.Ok, new
+        {
+            root,
+            depth,
+            found = found.Select(c => new
+            {
+                dir = c.Dir,
+                proposedId = c.ProposedId,
+                source = c.Source.ToString().ToLowerInvariant(),
+                build = c.Build,
+                idFromFolder = c.IdFromFolder,
+                idFromBuild = c.IdFromBuild,
+                mismatch = c.Mismatch,
+                registeredAs = c.RegisteredAs,
+                hasHarmony = c.HasHarmony,
+                mods = c.Mods,
+            }),
+            added,
+        });
     }
 
     public static int Mods(CommandContext ctx)

@@ -480,18 +480,40 @@ public sealed class MainViewModel : Notifier
         foreach (var (mod, _) in registered) Mods.Add(mod);
         foreach (var m in missing) Log($"Registrierte Mod-Konfiguration fehlt: {m}", LogKind.Warn);
 
+        ReloadVersions();
+
+        SelectedMod ??= Mods.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Rebuilds the version list from the machine configuration, keeping whatever
+    /// was ticked. Called after the version dialog has written something.
+    /// </summary>
+    public void ReloadVersions()
+    {
+        var ticked = Versions.Where(v => v.IsSelected).Select(v => v.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var before = Versions.Select(v => v.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         Versions.Clear();
         foreach (var v in Machine.Versions)
         {
+            var installed = File.Exists(Path.Combine(Machine.GameDir(v.Id), VersionScanner.ExeName));
+
+            // A version that has just appeared is the one the person went to
+            // register, so it starts ticked instead of needing a second click.
+            var isNew = before.Count > 0 && !before.Contains(v.Id);
+
             Versions.Add(new VersionItem
             {
                 Id = v.Id,
-                Installed = File.Exists(Path.Combine(Machine.GameDir(v.Id), "7DaysToDie.exe")),
+                Installed = installed,
                 Notes = v.Notes,
+                IsSelected = isNew ? installed : ticked.Contains(v.Id),
             });
         }
 
-        SelectedMod ??= Mods.FirstOrDefault();
+        RefreshReport();
     }
 
     private void RefreshVariants()

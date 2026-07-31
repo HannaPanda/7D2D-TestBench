@@ -47,6 +47,19 @@ public sealed class OkBrushConverter : IValueConverter
         throw new NotSupportedException();
 }
 
+/// <summary>true is amber, false is the muted grey. For "look at this row".</summary>
+public sealed class WarnBrushConverter : IValueConverter
+{
+    private static readonly SolidColorBrush Warn = LogKindBrushConverter.Freeze("#E8B44A");
+    private static readonly SolidColorBrush Muted = LogKindBrushConverter.Freeze("#8A93A6");
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is true ? Warn : Muted;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>Shows an element only when a string has content.</summary>
 public sealed class NotEmptyToVisibilityConverter : IValueConverter
 {

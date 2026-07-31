@@ -94,15 +94,38 @@ bricht dann sauber ab, damit die GamePrefs zurückgespielt werden.
 | Sichtprüfung beantworten | `tb verify --run <runId> --visual ok` |
 | Kompatibilitätsliste | `tb report --mod seven --write` |
 | Auffällige Logzeilen | `tb log --run <runId>` |
-| Neue Spielversion | `tb versions add 3.2.0 --branch v3.2.0` |
+| Installationen suchen | `tb versions scan`, eintragen mit `--add` |
+| Neue Spielversion ohne Installation | `tb versions add 3.2.0 --branch v3.2.0` |
 
 Vollständige Optionen in [`docs/cli.md`](docs/cli.md).
 
+## Eine neue Spielversion aufnehmen
+
+Wenn die Installation schon auf der Platte liegt, muss nichts getippt werden:
+
+```bash
+tb versions scan --add
+```
+
+Er sucht unter `gameRoot` nach Installationen und liest aus jeder heraus, welche
+Version sie ist. Im Fenster macht das der Knopf *verwalten* neben VERSIONEN:
+*hier suchen* durchsucht den Ordner im Feld, *Ordner waehlen...* nimmt eine
+einzelne Installation von überall her, und wählst du versehentlich den
+übergeordneten Ordner, sucht er einfach darin.
+
+Die Version kommt dabei **nicht** aus dem Ordnernamen, sondern aus der
+`MicrosoftGame.Config` der Installation. Das ist Absicht: `E:\Games\7DTD-3.0.1`
+heißt nicht, dass dort 3.0.1 liegt, sobald Steam den Ordner einmal im Bestand
+aktualisiert hat. Wo Name und Build sich widersprechen, sagt die Zeile das, und
+eingetragen wird der Ordner erst nach einem Blick von dir.
+
+Fehlt die Installation noch, legt `tb versions add 3.2.0 --branch v3.2.0` den
+Ordner an und druckt den passenden `DepotDownloader`-Befehl.
+
 ## Was das Tool nicht tut
 
-Es lädt keine Spielinstallation selbst herunter. `tb versions add` legt den Ordner
-an und druckt den passenden `DepotDownloader`-Befehl; Passwort und
-Steam-Guard-Code gibst du selbst ein.
+Es lädt keine Spielinstallation selbst herunter. Passwort und Steam-Guard-Code
+gibst du selbst ein.
 
 Es verändert die Live-Installation und die MO2-Modlist nicht. Aus der Modlist wird
 nur gelesen, um Gears und Quartz in die Testinstallationen zu spiegeln.

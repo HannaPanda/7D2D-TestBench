@@ -84,7 +84,8 @@ public static class Program
 
         Nachschauen
           tb versions                                      bekannte Spielversionen
-          tb versions add <version> [--path <p>] [--branch <b>] [--notes <t>]
+          tb versions scan [--root <p>] [--depth <n>] [--add]   Installationen suchen
+          tb versions add [<version>] [--path <p>] [--branch <b>] [--notes <t>]
           tb versions remove <version>
           tb mods                                          registrierte Mods
           tb mods add <pfad-zur-testbench.mod.json>

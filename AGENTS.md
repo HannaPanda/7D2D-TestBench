@@ -21,7 +21,7 @@ entfernt, wenn dieses Tool sie im Alltag ersetzt hat.
 - [`docs/architecture/config-schema.md`](docs/architecture/config-schema.md) - die
   drei Konfigurationsebenen, jedes Feld, und welche davon Fallen sind.
 - [`docs/conventions/traps.md`](docs/conventions/traps.md) - **wichtigste Datei.**
-  Fünfzehn Fallen, die alle bezahlt worden sind. Vor jeder Änderung an Deploy,
+  Sechzehn Fallen, die alle bezahlt worden sind. Vor jeder Änderung an Deploy,
   Prefs, Launcher oder Analyzer den passenden Absatz lesen.
 - [`docs/cli.md`](docs/cli.md) - Verben, Optionen, Exit-Codes, `--json`.
 
@@ -54,9 +54,13 @@ Konfiguration aktualisiert die passende Datei im selben Commit.
 
 - **Mod gegen alle Versionen testen** →
   `tb run --mod <fragment> --profile matrix --json`
-- **Neue Spielversion aufnehmen** → `tb versions add <version> --branch <branch>`,
-  dann die Installation mit dem gedruckten `DepotDownloader`-Befehl holen (das
-  macht der Mensch, wegen Passwort und Steam-Guard).
+- **Neue Spielversion aufnehmen** → wenn die Installation schon da ist:
+  `tb versions scan --add` (liest die Version aus `MicrosoftGame.Config`, nicht aus
+  dem Ordnernamen, siehe [Falle 16](docs/conventions/traps.md#16-der-ordnername-ist-keine-versionsangabe)).
+  Wenn sie noch fehlt: `tb versions add <version> --branch <branch>`, dann die
+  Installation mit dem gedruckten `DepotDownloader`-Befehl holen (das macht der
+  Mensch, wegen Passwort und Steam-Guard). Im Fenster macht das der Knopf
+  *verwalten* neben VERSIONEN.
 - **Neuen Mod aufnehmen** → `testbench.mod.json` in `<repo>\test\` anlegen, dann
   `tb mods add <pfad>`. Schema in
   [config-schema.md](docs/architecture/config-schema.md).
@@ -88,7 +92,7 @@ Konfiguration aktualisiert die passende Datei im selben Commit.
 Klasse mit handgeschriebenem `INotifyPropertyChanged`. Läufe laufen auf einem
 Threadpool-Thread, Meldungen gehen über `Dispatcher.BeginInvoke` zurück.
 
-Zwei Entscheidungen, die man kennen muss:
+Drei Entscheidungen, die man kennen muss:
 
 - **GUI-Läufe sind immer `VisualMode.Defer`.** Die Frage landet im Kasten unten,
   nicht in einem Modal-Dialog, der aufgeht, während das Spiel noch zugeht. Das ist
@@ -96,6 +100,10 @@ Zwei Entscheidungen, die man kennen muss:
 - **Das Log wird live aus der Datei nachgezogen** (`RunOptions.LogPathReady` plus
   ein Tail mit `FileShare.ReadWrite`). Ohne das sieht ein 35-Sekunden-Start aus wie
   ein hängendes Programm.
+- **`VersionsWindow` arbeitet auf derselben `MachineConfig`-Instanz** wie das
+  Hauptfenster und schreibt sie sofort. Danach ruft das Hauptfenster
+  `ReloadVersions()`, was die Häkchen behält und eine gerade neu eingetragene
+  Version schon angehakt anbietet.
 
 ## Stand
 

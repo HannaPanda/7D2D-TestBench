@@ -129,6 +129,14 @@ public sealed class GameVersion
     /// <summary>Steam branch this was pulled from, for reproducing the install.</summary>
     public string? Branch { get; set; }
 
+    /// <summary>
+    /// Identity version of MicrosoftGame.Config at the time this version was
+    /// registered, e.g. "1.301.4.0". Recorded so Doctor can notice when the
+    /// installation has become a different build while keeping its folder name,
+    /// which is what happens when Steam updates it in place.
+    /// </summary>
+    public string? Build { get; set; }
+
     /// <summary>Per-version override; empty means the global ReadyPattern.</summary>
     public string? ReadyPattern { get; set; }
 

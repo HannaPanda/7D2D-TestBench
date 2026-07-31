@@ -45,9 +45,9 @@ eine Ebene darüber.
     }
   },
 
-  "versions": [
-    { "id": "3.0.1", "branch": "public", "notes": "Live-Version" },
-    { "id": "3.1.0", "path": "E:\\Games\\7DTD-3.1.0", "readyPattern": null }
+  "versions": [                              // tb versions scan --add schreibt das
+    { "id": "3.0.1", "branch": "v3.0.1", "build": "1.301.4.0", "notes": "Live-Version" },
+    { "id": "3.1.0", "path": "E:\\Games\\7DTD-3.1.0", "build": "1.310.14.0" }
   ],
 
   "modConfigs": [                            // wo die Mod-Configs liegen
@@ -75,6 +75,11 @@ eine Ebene darüber.
   eine Installation woanders liegt.
 - **`versions[].readyPattern`** überschreibt den globalen Marker für eine Version.
   Nötig, wenn TFP den Wortlaut ändert.
+- **`versions[].build`** ist die Identity-Version aus `MicrosoftGame.Config`, wie
+  sie beim Eintragen dort stand. Nicht von Hand pflegen: sie ist der
+  Vergleichswert, an dem `tb doctor` merkt, dass Steam den Ordner im Nachhinein
+  aktualisiert hat und der Ordnername damit lügt. Siehe
+  [traps.md](../conventions/traps.md#16-der-ordnername-ist-keine-versionsangabe).
 - **`readyPattern`** darf nicht auf Telnet warten, siehe
   [traps.md](../conventions/traps.md#2-nicht-auf-started-telnet-warten). `tb doctor`
   prüft das.
