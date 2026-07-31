@@ -116,7 +116,7 @@ public sealed class GameLauncher
         foreach (var a in args) psi.ArgumentList.Add(a);
 
         _log($"Start: {Path.GetFileName(exePath)} {string.Join(' ', args)}");
-        var proc = Process.Start(psi) ?? throw new IOException($"'{exePath}' liess sich nicht starten.");
+        var proc = Process.Start(psi) ?? throw new IOException(I18n.Loc.T("launcher.startFailed", exePath));
 
         // Redirected streams must be drained or the game blocks once the pipe
         // buffer fills, which for a 35 s startup is a real possibility.
@@ -209,7 +209,7 @@ public sealed class GameLauncher
     private void KillTree(Process proc)
     {
         try { proc.Kill(entireProcessTree: true); }
-        catch (Exception ex) { _log($"Prozess liess sich nicht beenden: {ex.Message}"); }
+        catch (Exception ex) { _log(I18n.Loc.T("launcher.killFailed", ex.Message)); }
     }
 
     /// <summary>

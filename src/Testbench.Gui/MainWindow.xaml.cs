@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using Testbench.Core.I18n;
 
 namespace Testbench.Gui;
 
@@ -62,9 +63,8 @@ public partial class MainWindow : Window
     {
         if (string.IsNullOrWhiteSpace(_vm.TestedVersions))
         {
-            MessageBox.Show(this,
-                "Keine Version hat beide Stufen bestanden. Es gibt nichts zu melden.",
-                "Kompatibilitaet", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, Loc.T("gui.copy.nothingToReport"), Loc.T("gui.compatibility"),
+                MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -94,10 +94,8 @@ public partial class MainWindow : Window
         {
             // Closing mid-run would leave the game running, the lock held and the
             // GamePrefs unrestored. That last one is the expensive part.
-            var answer = MessageBox.Show(this,
-                "Es laeuft noch ein Test. Beim Schliessen wird er abgebrochen, das Spiel beendet " +
-                "und die GamePrefs zurueckgespielt. Trotzdem schliessen?",
-                "Lauf aktiv", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            var answer = MessageBox.Show(this, Loc.T("gui.closeWhileRunning"), Loc.T("gui.runActive"),
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
             if (answer != MessageBoxResult.Yes) { e.Cancel = true; return; }
             _vm.Cancel();
@@ -109,7 +107,7 @@ public partial class MainWindow : Window
     {
         if (!File.Exists(path) && !Directory.Exists(path))
         {
-            MessageBox.Show(this, $"Nicht gefunden:\n{path}", "Oeffnen",
+            MessageBox.Show(this, Loc.T("gui.notFound", path), Loc.T("gui.open"),
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -120,7 +118,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Oeffnen", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, ex.Message, Loc.T("gui.open"), MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

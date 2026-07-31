@@ -1,5 +1,6 @@
 using Testbench.Cli.Commands;
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 
 namespace Testbench.Cli;
 
@@ -21,10 +22,15 @@ public static class Program
         var output = new Output(json);
         var verb = args.Verb(0)?.ToLowerInvariant();
 
+        // Language before anything is printed. --lang wins over the config, which
+        // wins over the system language; an unknown value lands on English rather
+        // than stopping a run.
+        SelectLanguage(args);
+
         if (verb is null || verb is "help" or "-h" or "--help")
         {
-            if (!json) Console.WriteLine(HelpText);
-            return output.Finish("help", ExitCodes.Ok, new { usage = HelpText });
+            if (!json) Console.WriteLine(Help());
+            return output.Finish("help", ExitCodes.Ok, new { usage = Help() });
         }
 
         try
@@ -38,6 +44,7 @@ public static class Program
                 "versions" or "version" => ConfigCommands.Versions(ctx),
                 "mods" or "mod" => ConfigCommands.Mods(ctx),
                 "profiles" => ConfigCommands.Profiles(ctx),
+                "lang" or "language" => ConfigCommands.Lang(ctx),
                 "run" => RunCommands.Run(ctx),
                 "status" => RunCommands.Status(ctx),
                 "verify" => RunCommands.Verify(ctx),
@@ -50,7 +57,7 @@ public static class Program
         {
             output.Bad(ex.Message);
             if (!json) Console.WriteLine();
-            if (!json) Console.WriteLine(HelpText);
+            if (!json) Console.WriteLine(Help());
             return output.Finish(verb, ExitCodes.SetupError, new { error = ex.Message });
         }
         catch (ConfigException ex)
@@ -66,46 +73,83 @@ public static class Program
         }
     }
 
+    /// <summary>
+    /// Reads the language from --lang, else from the config file if there is one,
+    /// else from the system. Deliberately tolerant: a broken config must still let
+    /// "tb doctor" explain itself, so a failure here means English, not an abort.
+    /// </summary>
+    private static void SelectLanguage(Args args)
+    {
+        var explicitLang = args.Get("lang") ?? args.Get("language");
+        if (!string.IsNullOrWhiteSpace(explicitLang)) { Loc.Use(explicitLang); return; }
+
+        try
+        {
+            var path = ConfigStore.ResolveMachinePath(args.Get("config"));
+            if (File.Exists(path)) { Loc.Use(ConfigStore.LoadMachine(path).Language); return; }
+        }
+        catch (Exception)
+        {
+            // Fall through to the system language.
+        }
+        Loc.Use("auto");
+    }
+
     private static int Unknown(Output output, string verb)
     {
-        output.Bad($"Unbekannter Befehl '{verb}'.");
-        if (!output.IsJson) Console.WriteLine(HelpText);
+        output.Bad(Loc.T("cli.unknownCommand", verb));
+        if (!output.IsJson) Console.WriteLine(Help());
         return output.Finish(verb, ExitCodes.SetupError, new { error = $"unknown command: {verb}" });
     }
 
-    public const string HelpText = """
-        tb - 7DTD Multiversion-Testbench
-
-        Einrichten
-          tb init [--game-root <pfad>] [--bench-root <pfad>]
-          tb import --psd1 <datei> [--mod-out <datei>]      .psd1 des alten Benchs uebernehmen
-          tb import --gui-verified <datei> --mod <modId>    alte Sichtpruefungen uebernehmen
-          tb doctor                                        warum es nicht laeuft, vor dem Lauf
-
-        Nachschauen
-          tb versions                                      bekannte Spielversionen
-          tb versions scan [--root <p>] [--depth <n>] [--add]   Installationen suchen
-          tb versions add [<version>] [--path <p>] [--branch <b>] [--notes <t>]
-          tb versions remove <version>
-          tb mods                                          registrierte Mods
-          tb mods add <pfad-zur-testbench.mod.json>
-          tb mods remove <modId|pfad>
-          tb profiles --mod <modId>                        fertige Testkombinationen
-
-        Testen
-          tb run --mod <modId> --profile <name>
-          tb run --mod <modId> --version 3.0.1 [--version 3.1.0] [--variant <name>]
-                 [--stage headless|gui] [--visual ask|defer|ok] [--skip-deploy] [--note <t>]
-          tb status [--mod <modId>] [--limit <n>] [--pending]
-          tb verify --run <runId> --visual ok|fail [--note <t>]
-          tb report --mod <modId> [--variant <name>] [--write]
-          tb log --run <runId> [--lines <n>] [--highlights]
-
-        Global
-          --json            genau ein JSON-Objekt auf stdout, sonst nichts
-          --config <datei>  andere testbench.json verwenden
-
-        Exit-Codes
-          0 in Ordnung   1 Test durchgefallen   2 Konfiguration/Umgebung   3 blockiert
-        """;
+    /// <summary>
+    /// Usage text. Assembled from the catalog so it translates, but the verbs and
+    /// options themselves never do: they are the contract, and a translated flag
+    /// would be a different program.
+    /// </summary>
+    public static string Help()
+    {
+        var lines = new[]
+        {
+            Loc.T("cli.help.title"),
+            "",
+            Loc.T("cli.help.section.setup"),
+            "  tb init [--game-root <path>] [--bench-root <path>]",
+            "  tb import --psd1 <file> [--mod-out <file>]        " + Loc.T("cli.help.import.psd1"),
+            "  tb import --gui-verified <file> --mod <modId>     " + Loc.T("cli.help.import.guiVerified"),
+            "  tb doctor                                        " + Loc.T("cli.help.doctor"),
+            "  tb lang [<language>] [--check]                   " + Loc.T("cli.help.lang"),
+            "",
+            Loc.T("cli.help.section.look"),
+            "  tb versions                                      " + Loc.T("cli.help.versions"),
+            "  tb versions scan [--root <p>] [--depth <n>] [--add]  " + Loc.T("cli.help.versionsScan"),
+            "  tb versions add [<version>] [--path <p>] [--branch <b>] [--notes <t>]",
+            "  tb versions remove <version>",
+            "  tb mods                                          " + Loc.T("cli.help.mods"),
+            "  tb mods add <path-to-testbench.mod.json>",
+            "  tb mods remove <modId|path>",
+            "  tb profiles --mod <modId>                        " + Loc.T("cli.help.profiles"),
+            "",
+            Loc.T("cli.help.section.test"),
+            "  tb run --mod <modId> --profile <name>",
+            "  tb run --mod <modId> --version 3.0.1 [--version 3.1.0] [--variant <name>]",
+            "         [--stage headless|gui] [--visual ask|defer|ok] [--skip-deploy] [--note <t>]",
+            "  tb status [--mod <modId>] [--limit <n>] [--pending]",
+            "  tb verify --run <runId> --visual ok|fail [--note <t>]",
+            "  tb report --mod <modId> [--variant <name>] [--write]",
+            "  tb log --run <runId> [--lines <n>] [--highlights]",
+            "",
+            Loc.T("cli.help.section.global"),
+            "  --json            " + Loc.T("cli.help.json"),
+            "  --config <file>   " + Loc.T("cli.help.config"),
+            "  --lang <language>  " + Loc.T("cli.help.langFlag"),
+            "",
+            Loc.T("cli.help.section.exitCodes"),
+            "  0 " + Loc.T("cli.exit.ok") +
+            "   1 " + Loc.T("cli.exit.testFailed") +
+            "   2 " + Loc.T("cli.exit.setupError") +
+            "   3 " + Loc.T("cli.exit.blocked"),
+        };
+        return string.Join(Environment.NewLine, lines);
+    }
 }

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Testbench.Core.Config;
 using Testbench.Core.Deploy;
+using Testbench.Core.I18n;
 using Testbench.Core.Model;
 using Testbench.Core.Prefs;
 using Testbench.Core.Store;
@@ -93,20 +94,26 @@ public sealed class TestRunner
         var exe = Path.Combine(gameDir, "7DaysToDie.exe");
 
         if (!File.Exists(exe))
-            return Finish(run, RunStatus.Missing, $"Keine Installation unter {gameDir}");
+            return Finish(run, RunStatus.Missing, Loc.T("run.noInstall", gameDir));
+
+        // Refused, not warned about: a run sweeps every mod it did not install
+        // into _Mods-deaktiviert. Pointed at the copy somebody plays, it would
+        // take their modlist apart, and they would find out days later.
+        if (Diagnostics.SteamLocator.IsLiveInstall(gameDir))
+            return Finish(run, RunStatus.SetupError, Loc.T("run.isLiveInstall", gameDir));
 
         var running = GameLauncher.RunningInstances();
         if (running.Length > 0)
         {
             var pid = running[0].Id;
             foreach (var p in running) p.Dispose();
-            return Finish(run, RunStatus.SetupError, $"Es laeuft bereits eine 7DaysToDie.exe (PID {pid}).");
+            return Finish(run, RunStatus.SetupError, Loc.T("run.alreadyRunning", pid));
         }
 
         // The client needs a running Steam. Headless does not, so this is only a
         // warning for the stage where it actually bites.
         if (stage == TestStage.Gui && !IsSteamRunning())
-            _log("Warnung: Steam laeuft nicht - das Spiel braucht den laufenden Client.");
+            _log(Loc.T("run.steamNotRunning"));
 
         var userData = Path.Combine(_machine.UserDataRoot, stage == TestStage.Gui ? $"{versionId}-gui" : versionId);
         GuardUserDataFolder(userData);
@@ -130,7 +137,7 @@ public sealed class TestRunner
                 run.ModName = deploy.ModInfo.Name;
                 run.ModVersion = deploy.ModInfo.Version;
                 run.Dependencies = deploy.Dependencies;
-                foreach (var w in deploy.Warnings) _log($"Warnung: {w}");
+                foreach (var w in deploy.Warnings) _log(Loc.T("run.warning", w));
             }
             else
             {
@@ -152,7 +159,7 @@ public sealed class TestRunner
                         Folder = dep.Folder,
                         Deployed = Directory.Exists(depDir),
                         ReportedName = Directory.Exists(depDir) ? ModInfoReader.Read(depDir).Name : null,
-                        Problem = Directory.Exists(depDir) ? null : "nicht installiert",
+                        Problem = Directory.Exists(depDir) ? null : Loc.T("dep.notInstalled"),
                     });
                 }
             }
@@ -191,17 +198,25 @@ public sealed class TestRunner
         catch (Exception ex)
         {
             outcome = new LaunchOutcome(StopReason.Exited, null);
-            launchError = $"Start fehlgeschlagen: {ex.Message}";
+            launchError = Loc.T("run.launchFailed", ex.Message);
         }
         finally
         {
             // Exactly once, and always, even after a failure: the tuned live
             // settings are the thing most easily lost here and the hardest to
             // notice afterwards.
-            var (restored, checks) = prefs.Restore(backup);
-            if (!restored) _log("GamePrefs-Restore fehlgeschlagen.");
+            var (restored, checks, roundTrip) = prefs.Restore(backup);
+            if (!restored) _log(Loc.T("prefs.restoreFailedShort"));
+
             foreach (var c in checks.Where(c => !c.Ok))
-                _log($"GamePrefs: {c.Name} ist {c.Actual?.ToString() ?? "unlesbar"}, erwartet {c.Expected}. {c.Problem}");
+                _log(Loc.T("prefs.valueOff", c.Name, c.Actual?.ToString() ?? Loc.T("prefs.unreadable"),
+                    c.Expected, c.Problem ?? ""));
+
+            if (!roundTrip.Ok)
+                _log(roundTrip.Problem is not null
+                    ? Loc.T("prefs.roundtrip.unknown", roundTrip.Problem)
+                    : Loc.T("prefs.roundtrip.lost", roundTrip.Differing.Count,
+                        string.Join(", ", roundTrip.Differing.Take(8))));
         }
 
         if (launchError is not null) return Finish(run, RunStatus.SetupError, launchError);
@@ -211,7 +226,7 @@ public sealed class TestRunner
         // ---- evaluate ------------------------------------------------------
         var lines = GameLauncher.ReadLogLines(run.LogPath);
         if (lines.Length == 0)
-            return Finish(run, RunStatus.SetupError, "Kein Logfile entstanden.");
+            return Finish(run, RunStatus.SetupError, Loc.T("run.noLog"));
 
         run.Analysis = LogAnalyzer.Analyze(
             LogAnalyzer.InputFor(lines, _machine, mod, run.ModName, useStage2Filter: stage == TestStage.Gui));
@@ -223,11 +238,11 @@ public sealed class TestRunner
         {
             if (dep.ReportedName is null)
             {
-                dep.Problem ??= "nicht installiert";
+                dep.Problem ??= Loc.T("dep.notInstalled");
                 continue;
             }
             dep.Loaded = run.Analysis.LoadedMods.Contains(dep.ReportedName, StringComparer.OrdinalIgnoreCase);
-            if (!dep.Loaded) dep.Problem ??= "nicht geladen";
+            if (!dep.Loaded) dep.Problem ??= Loc.T("dep.notLoaded");
         }
 
         var status = LogAnalyzer.Verdict(run.Analysis, run.Dependencies, mod.Stage1.RequireHarmony, run.StopReason!);
@@ -265,7 +280,7 @@ public sealed class TestRunner
             case VisualMode.AssumeOk:
                 run.Visual = VisualState.Ok;
                 run.VisualAt = DateTimeOffset.Now;
-                run.VisualNote = "Ohne Rueckfrage als bestanden verbucht.";
+                run.VisualNote = Loc.T("visual.assumedOk");
                 break;
 
             case VisualMode.Ask when opts.AskVisual is not null:
@@ -295,7 +310,7 @@ public sealed class TestRunner
         var live = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "7DaysToDie");
         if (ConfigStore.PathsEqual(userData, live))
-            throw new ConfigException($"UserDataFolder zeigt auf die LIVE-Daten ({live}).");
+            throw new ConfigException(Loc.T("error.userDataIsLive", live));
     }
 
     private string FatalPatternFor(ModConfig mod)

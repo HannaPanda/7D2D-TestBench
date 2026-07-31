@@ -1,4 +1,5 @@
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 
 namespace Testbench.Core.Tests;
 
@@ -12,7 +13,13 @@ public sealed class VersionScannerTests : IDisposable
     private readonly string _root =
         Path.Combine(Path.GetTempPath(), "tb-scan-" + Guid.NewGuid().ToString("N")[..8]);
 
-    public VersionScannerTests() => Directory.CreateDirectory(_root);
+    public VersionScannerTests()
+    {
+        Directory.CreateDirectory(_root);
+        // Explain() is localized; these assertions read words, so the language has
+        // to be pinned instead of following whoever runs the suite.
+        Loc.Use(Loc.English);
+    }
 
     public void Dispose()
     {
@@ -78,7 +85,7 @@ public sealed class VersionScannerTests : IDisposable
 
         Assert.Equal("3.1.0", c.ProposedId);
         Assert.Equal(IdSource.FolderName, c.Source);
-        Assert.Contains("geraten", c.Explain());
+        Assert.Contains("folder name", c.Explain());
     }
 
     /// <summary>
@@ -95,8 +102,8 @@ public sealed class VersionScannerTests : IDisposable
 
         Assert.True(c.Mismatch);
         Assert.Equal("3.1.0", c.ProposedId);
-        Assert.Contains("Ordner sagt 3.0.1", c.Explain());
-        Assert.Contains("Installation sagt 3.1.0", c.Explain());
+        Assert.Contains("folder says 3.0.1", c.Explain());
+        Assert.Contains("installation says 3.1.0", c.Explain());
     }
 
     [Fact]
@@ -117,7 +124,7 @@ public sealed class VersionScannerTests : IDisposable
         var c = VersionScanner.Inspect(dir);
 
         Assert.False(c.HasHarmony);
-        Assert.Contains("kein 0_TFP_Harmony", c.Explain());
+        Assert.Contains("no 0_TFP_Harmony", c.Explain());
     }
 
     // ---- walking a folder tree ---------------------------------------------

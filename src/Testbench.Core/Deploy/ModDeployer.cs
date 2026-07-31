@@ -34,7 +34,7 @@ public sealed class ModDeployer
 
         var source = mod.VariantSource(variant);
         if (!Directory.Exists(source))
-            throw new ConfigException($"Mod-Quelle nicht gefunden: {source}");
+            throw new ConfigException(I18n.Loc.T("deploy.modSourceMissing", source));
 
         var modFolder = Path.GetFileName(Path.TrimEndingDirectorySeparator(source));
         var deps = ResolveDependencies(mod);
@@ -73,12 +73,12 @@ public sealed class ModDeployer
                 // An existing older copy is NOT deleted, so the run at least
                 // happens with what is there, but it must be reported instead of
                 // passing for fresh.
-                r.Problem = $"Quelle fehlt: {dep.Source}";
-                warnings.Add($"Abhaengigkeit '{dep.Key}' nicht unter '{dep.Source}'.");
+                r.Problem = I18n.Loc.T("deploy.sourceMissing", dep.Source);
+                warnings.Add(I18n.Loc.T("deploy.depSourceMissing", dep.Key, dep.Source));
             }
 
             if (Directory.Exists(depTarget)) r.ReportedName = ModInfoReader.Read(depTarget).Name;
-            else if (r.Problem is null) r.Problem = "nicht installiert";
+            else if (r.Problem is null) r.Problem = I18n.Loc.T("dep.notInstalled");
 
             results.Add(r);
         }
@@ -99,7 +99,7 @@ public sealed class ModDeployer
         {
             if (depth > 8) throw new ConfigException($"Abhaengigkeiten von '{key}' sind zirkulaer.");
             if (!_machine.DependencyLibrary.TryGetValue(key, out var def))
-                throw new ConfigException($"Mod '{mod.ModId}' verlangt '{key}', das nicht in dependencyLibrary steht.");
+                throw new ConfigException(I18n.Loc.T("deploy.unknownDependency", mod.ModId, key));
             foreach (var req in def.Requires) Add(req, depth + 1);
             if (!wanted.Contains(key, StringComparer.OrdinalIgnoreCase)) wanted.Add(key);
         }
@@ -137,7 +137,7 @@ public sealed class ModDeployer
             Directory.Move(dir, to);
 
             if (Directory.Exists(dir))
-                throw new IOException($"Konnte '{name}' nicht aus dem Mods-Ordner entfernen - der Lauf waere nicht aussagekraeftig.");
+                throw new IOException(I18n.Loc.T("deploy.cannotRemove", name));
 
             disabled.Add(name);
             _log($"Deaktiviert: {name}");

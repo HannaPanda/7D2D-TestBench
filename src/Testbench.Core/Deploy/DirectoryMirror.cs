@@ -13,7 +13,7 @@ public static class DirectoryMirror
 {
     public static void Replace(string source, string target)
     {
-        if (!Directory.Exists(source)) throw new IOException($"Quelle fehlt: {source}");
+        if (!Directory.Exists(source)) throw new IOException(I18n.Loc.T("deploy.sourceMissing", source));
 
         DeleteIfExists(target);
         Directory.CreateDirectory(target);
@@ -33,8 +33,7 @@ public static class DirectoryMirror
         catch (IOException ex)
         {
             throw new IOException(
-                $"'{path}' liess sich nicht loeschen: {ex.Message} " +
-                "Laeuft 7DaysToDie.exe noch? Das Spiel haelt die Mod-DLLs offen.", ex);
+                I18n.Loc.T("deploy.deleteFailed", path, ex.Message), ex);
         }
         catch (UnauthorizedAccessException ex)
         {

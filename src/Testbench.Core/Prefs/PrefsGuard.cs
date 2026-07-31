@@ -7,6 +7,16 @@ namespace Testbench.Core.Prefs;
 public sealed record PrefsCheck(string Name, int? Expected, int? Actual, bool Ok, string? Problem);
 
 /// <summary>
+/// Result of comparing the key after the restore against the backup taken before
+/// the run. This is the check that needs no configuration: whatever the person
+/// had set, it has to be there again afterwards.
+/// </summary>
+public sealed record PrefsRoundTrip(bool Ok, int Expected, int Actual, List<string> Differing, string? Problem)
+{
+    public static PrefsRoundTrip Unknown(string problem) => new(false, 0, 0, new List<string>(), problem);
+}
+
+/// <summary>
 /// Protects the GamePrefs around every run.
 ///
 /// 7DTD stores its options as Unity PlayerPrefs under
@@ -37,21 +47,106 @@ public sealed class PrefsGuard
 
         var ok = Reg("export", _cfg.Key, file, "/y");
         if (!ok || !File.Exists(file))
-            throw new IOException("GamePrefs konnten nicht gesichert werden - Abbruch.");
+            throw new IOException(I18n.Loc.T("prefs.backupFailed"));
 
         return file;
     }
 
     /// <summary>
-    /// Imports the backup again and then checks the values that matter. The
-    /// PowerShell scripts restored and trusted the result; these four settings are
-    /// the ones that fixed the RAM thrashing, so a failed restore has to be loud.
+    /// Imports the backup again and proves it worked, in two ways: the whole key
+    /// is compared against the backup file, and any explicitly configured value is
+    /// read back by name. The PowerShell scripts imported and trusted the result;
+    /// losing tuned settings is the most expensive thing that can happen here and
+    /// the hardest to notice afterwards.
     /// </summary>
-    public (bool Restored, List<PrefsCheck> Checks) Restore(string backupFile)
+    public (bool Restored, List<PrefsCheck> Checks, PrefsRoundTrip RoundTrip) Restore(string backupFile)
     {
         var restored = Reg("import", backupFile);
-        if (!restored) _log($"Restore fehlgeschlagen. Manuell: reg import \"{backupFile}\"");
-        return (restored, Verify());
+        if (!restored) _log(I18n.Loc.T("prefs.restore.failed", backupFile));
+        return (restored, Verify(), RoundTrip(backupFile));
+    }
+
+    /// <summary>
+    /// Exports the key again and compares it value by value against the backup.
+    /// Works without any configuration and for anyone's settings, which is why it
+    /// replaced the hard-coded list of four values the bench started with.
+    /// </summary>
+    public PrefsRoundTrip RoundTrip(string backupFile)
+    {
+        if (!File.Exists(backupFile)) return PrefsRoundTrip.Unknown(I18n.Loc.T("prefs.roundtrip.noBackup", backupFile));
+
+        var temp = Path.Combine(Path.GetTempPath(), $"tb_prefs_after_{Guid.NewGuid():N}.reg");
+        try
+        {
+            if (!Reg("export", _cfg.Key, temp, "/y") || !File.Exists(temp))
+                return PrefsRoundTrip.Unknown(I18n.Loc.T("prefs.roundtrip.noExport"));
+
+            var before = ValueLines(backupFile);
+            var after = ValueLines(temp);
+
+            // Names present before and now different or gone. A value that only
+            // exists afterwards is the game having written something new, which is
+            // not a loss and not worth alarming anyone about.
+            var differing = before
+                .Where(kv => !after.TryGetValue(kv.Key, out var now) || now != kv.Value)
+                .Select(kv => kv.Key)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new PrefsRoundTrip(differing.Count == 0, before.Count, after.Count, differing, null);
+        }
+        catch (Exception ex)
+        {
+            return PrefsRoundTrip.Unknown(ex.Message);
+        }
+        finally
+        {
+            try { File.Delete(temp); } catch (IOException) { }
+        }
+    }
+
+    /// <summary>
+    /// Value lines of a .reg export as name to raw text. reg.exe writes UTF-16,
+    /// and a value can be split over continuation lines (hex values are), so those
+    /// are folded back together before anything is compared.
+    /// </summary>
+    private static Dictionary<string, string> ValueLines(string regFile)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string? name = null;
+        var value = new System.Text.StringBuilder();
+
+        foreach (var raw in File.ReadAllLines(regFile))
+        {
+            var line = raw.TrimEnd();
+            if (line.EndsWith('\\')) { line = line[..^1]; }
+
+            if (line.StartsWith('"'))
+            {
+                Flush();
+                var close = line.IndexOf("\"=", StringComparison.Ordinal);
+                if (close < 1) continue;
+                name = line[1..close];
+                value.Append(line[(close + 2)..].Trim());
+            }
+            else if (name is not null && line.Length > 0 && !line.StartsWith('['))
+            {
+                value.Append(line.Trim());
+            }
+            else if (line.StartsWith('['))
+            {
+                Flush();
+            }
+        }
+        Flush();
+        return result;
+
+        void Flush()
+        {
+            if (name is not null) result[name] = value.ToString();
+            name = null;
+            value.Clear();
+        }
     }
 
     /// <summary>Compares the tuned values against what is in the registry now.</summary>
@@ -64,7 +159,7 @@ public sealed class PrefsGuard
         if (key is null)
         {
             foreach (var (name, expected) in _cfg.GoldenValues)
-                result.Add(new PrefsCheck(name, expected, null, false, $"Registry-Key '{_cfg.Key}' nicht lesbar."));
+                result.Add(new PrefsCheck(name, expected, null, false, I18n.Loc.T("prefs.keyUnreadable", _cfg.Key)));
             return result;
         }
 
@@ -79,14 +174,14 @@ public sealed class PrefsGuard
 
             if (match is null)
             {
-                result.Add(new PrefsCheck(name, expected, null, false, "Wert nicht vorhanden."));
+                result.Add(new PrefsCheck(name, expected, null, false, I18n.Loc.T("prefs.valueMissing")));
                 continue;
             }
 
             var actual = AsInt(key.GetValue(match));
             if (actual is null)
             {
-                result.Add(new PrefsCheck(name, expected, null, false, $"Wert '{match}' nicht als Zahl lesbar."));
+                result.Add(new PrefsCheck(name, expected, null, false, I18n.Loc.T("prefs.valueNotANumber", match)));
                 continue;
             }
 
@@ -173,7 +268,7 @@ public sealed class PrefsGuard
         }
         catch (Exception ex)
         {
-            _log($"reg.exe liess sich nicht starten: {ex.Message}");
+            _log(I18n.Loc.T("prefs.regNotStarted", ex.Message));
             return false;
         }
     }

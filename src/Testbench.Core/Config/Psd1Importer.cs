@@ -64,8 +64,8 @@ public static class Psd1Importer
                     if (!string.Equals(existing.Folder, folder, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existing.Source, source, StringComparison.OrdinalIgnoreCase))
                     {
-                        notes.Add($"Abhaengigkeit '{key}' war schon registriert ({existing.Folder} <- {existing.Source}); " +
-                                  $"die abweichende Angabe aus '{Path.GetFileName(psd1Path)}' ({folder} <- {source}) wurde NICHT uebernommen.");
+                        notes.Add(I18n.Loc.T("import.depAlreadyKnown", key, existing.Folder, existing.Source,
+                            Path.GetFileName(psd1Path), folder, source));
                     }
                     continue;
                 }
@@ -118,7 +118,7 @@ public static class Psd1Importer
                     Name = name,
                     Folder = folder,
                     Notes = names.Count > 1
-                        ? $"Frueher fuer alle Editionen derselbe Ordner ({string.Join(", ", names.OrderBy(n => n))})."
+                        ? I18n.Loc.T("import.sameFolderForAllEditions", string.Join(", ", names.OrderBy(n => n)))
                         : null,
                 });
             }
@@ -139,7 +139,7 @@ public static class Psd1Importer
         {
             mod.ModId = ModIdFromRepo(repo, psd1Path);
             mod.DisplayName = Path.GetFileName(repo.TrimEnd('\\', '/'));
-            notes.Add($"Mod-Quelle nicht erreichbar; modId aus dem Repo-Namen abgeleitet ('{mod.ModId}').");
+            notes.Add(I18n.Loc.T("import.modIdFromRepo", mod.ModId));
         }
 
         if (root.TryGetProperty("Stage2", out var s2) && s2.ValueKind == JsonValueKind.Object)
@@ -221,13 +221,13 @@ public static class Psd1Importer
         psi.ArgumentList.Add(
             $"Import-PowerShellDataFile -LiteralPath '{path.Replace("'", "''")}' | ConvertTo-Json -Depth 8 -Compress");
 
-        using var p = Process.Start(psi) ?? throw new ConfigException("powershell.exe liess sich nicht starten.");
+        using var p = Process.Start(psi) ?? throw new ConfigException(I18n.Loc.T("import.psNotStarted"));
         var stdout = p.StandardOutput.ReadToEnd();
         var stderr = p.StandardError.ReadToEnd();
         p.WaitForExit();
 
         if (p.ExitCode != 0 || string.IsNullOrWhiteSpace(stdout))
-            throw new ConfigException($"'{path}' liess sich nicht lesen: {stderr.Trim()}");
+            throw new ConfigException(I18n.Loc.T("import.psd1Unreadable", path, stderr.Trim()));
 
         try { return JsonDocument.Parse(stdout); }
         catch (JsonException ex) { throw new ConfigException($"Konvertierung von '{path}' unlesbar: {ex.Message}"); }

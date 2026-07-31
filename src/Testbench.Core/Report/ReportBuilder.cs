@@ -1,5 +1,6 @@
 using System.Text;
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 using Testbench.Core.Model;
 using Testbench.Core.Store;
 
@@ -49,7 +50,7 @@ public sealed class MatrixReport
             {
                 0 => "",
                 1 => v[0],
-                _ => string.Join(", ", v.Take(v.Count - 1)) + " and " + v[^1],
+                _ => string.Join(", ", v.Take(v.Count - 1)) + I18n.Loc.T("report.listAnd") + v[^1],
             };
         }
     }
@@ -96,29 +97,30 @@ public static class ReportBuilder
             var gui = row.Gui;
             if (gui is null)
             {
-                row.GuiNote = "kein GUI-Lauf";
+                row.GuiNote = Loc.T("report.gui.noRun");
             }
             else if (!string.IsNullOrWhiteSpace(modVersion) &&
                      !string.Equals(gui.ModVersion, modVersion, StringComparison.OrdinalIgnoreCase))
             {
-                row.GuiNote = $"GUI-Lauf war Mod {gui.ModVersion}, aktuell {modVersion}";
+                row.GuiNote = Loc.T("report.gui.modVersionMismatch", gui.ModVersion, modVersion);
             }
             else if (gui.Status != RunStatus.Ok)
             {
-                row.GuiNote = $"GUI-Lauf war {gui.StatusText}";
+                row.GuiNote = Loc.T("report.gui.status", gui.StatusText);
             }
             else if (gui.EvidenceOk == false)
             {
                 var missing = gui.MissingEvidence.Count > 0 ? $" ({string.Join(", ", gui.MissingEvidence)})" : "";
-                row.GuiNote = $"{gui.EvidenceLabel ?? "Nachweis"} fehlt{missing}";
+                row.GuiNote = Loc.T("report.gui.evidenceMissing",
+                    gui.EvidenceLabel ?? Loc.T("report.evidenceFallback"), missing);
             }
             else if (gui.Visual == VisualState.Pending)
             {
-                row.GuiNote = "Sichtpruefung offen";
+                row.GuiNote = Loc.T("report.gui.visualPending");
             }
             else if (gui.Visual != VisualState.Ok)
             {
-                row.GuiNote = "Sichtpruefung nicht bestaetigt";
+                row.GuiNote = Loc.T("report.gui.visualNotConfirmed");
             }
             else
             {
@@ -134,10 +136,14 @@ public static class ReportBuilder
     public static string ToMarkdown(MatrixReport r)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"# Kompatibilitaets-Matrix - {r.ModDisplayName} {r.Variant} {r.ModVersion} - {r.Generated:yyyy-MM-dd HH:mm}");
+        sb.AppendLine(Loc.T("report.md.title", r.ModDisplayName, r.Variant, r.ModVersion,
+            r.Generated.ToString("yyyy-MM-dd HH:mm")));
         sb.AppendLine();
-        sb.AppendLine("| Version | Gemeldet | Headless | Mod geladen | Harmony | ERR | EXC | XML | Ignoriert | GUI |");
+        sb.AppendLine(Loc.T("report.md.tableHeader"));
         sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
+
+        var yes = Loc.T("report.yes");
+        var no = Loc.T("report.no");
 
         foreach (var row in r.Rows)
         {
@@ -146,44 +152,34 @@ public static class ReportBuilder
             {
                 row.VersionId,
                 h?.GameVersion ?? "",
-                h?.StatusText ?? "UNGETESTET",
-                h is null ? "" : h.Analysis.ModLoaded ? "ja" : "nein",
-                h is null ? "" : h.Analysis.HarmonyApplied ? "ja" : "nein",
+                h?.StatusText ?? RunStatusText.Of(RunStatus.Untested),
+                h is null ? "" : h.Analysis.ModLoaded ? yes : no,
+                h is null ? "" : h.Analysis.HarmonyApplied ? yes : no,
                 h?.Analysis.Errors.ToString() ?? "",
                 h?.Analysis.Exceptions.ToString() ?? "",
                 h?.Analysis.XmlProblems.ToString() ?? "",
                 h?.Analysis.Ignored.ToString() ?? "",
-                row.GuiOk ? "OK" : row.GuiNote,
+                row.GuiOk ? RunStatusText.Of(RunStatus.Ok) : row.GuiNote,
             };
             sb.AppendLine("| " + string.Join(" | ", cells) + " |");
         }
 
         sb.AppendLine();
-        sb.AppendLine("## Uebernahme in README / Nexus / release.yml");
+        sb.AppendLine(Loc.T("report.md.handover"));
         sb.AppendLine();
-        if (r.TestedVersions.Length > 0)
-        {
-            sb.AppendLine($"    TESTED_VERSIONS: \"{r.TestedVersions}\"");
-        }
-        else
-        {
-            sb.AppendLine("    (keine Version hat BEIDE Stufen bestanden - nichts als kompatibel melden)");
-        }
+        sb.AppendLine(r.TestedVersions.Length > 0
+            ? $"    TESTED_VERSIONS: \"{r.TestedVersions}\""
+            : "    " + Loc.T("report.md.nothingPassed"));
         sb.AppendLine();
 
         if (r.PartialOnly.Count > 0)
         {
-            sb.AppendLine("**Nur Stufe 1 bestanden, NICHT vorschlagen:** " +
-                          string.Join("; ", r.PartialOnly.Select(x => $"{x.VersionId} ({x.GuiNote})")) + ".");
+            sb.AppendLine(Loc.T("report.md.partialOnly",
+                string.Join("; ", r.PartialOnly.Select(x => $"{x.VersionId} ({x.GuiNote})"))));
             sb.AppendLine();
         }
 
-        sb.AppendLine("**Headless deckt nichts Grafisches und nichts Eingabebezogenes ab.** Unter");
-        sb.AppendLine("`-nographics` laeuft die Atlas-/Textur-Injektion nicht, und Menues, Tasten und");
-        sb.AppendLine("Controller werden nie angefasst. Eine Version kommt erst auf die Liste, wenn");
-        sb.AppendLine("zusaetzlich ein GUI-Lauf vorliegt, dort der konfigurierte Nachweis im Log steht");
-        sb.AppendLine("UND ein Mensch die Sichtpruefung bestaetigt hat. Die Bestaetigung ist an die");
-        sb.AppendLine("Mod-Version gebunden und verfaellt beim naechsten Release.");
+        sb.AppendLine(Loc.T("report.md.footer"));
 
         return sb.ToString();
     }

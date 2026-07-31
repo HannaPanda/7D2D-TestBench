@@ -73,8 +73,7 @@ public static class ConfigStore
     {
         if (!File.Exists(path))
         {
-            throw new ConfigException(
-                $"Keine Maschinenkonfiguration unter '{path}'. Anlegen mit: tb init");
+            throw new ConfigException(I18n.Loc.T("error.noMachineConfig", path));
         }
 
         MachineConfig? cfg;
@@ -84,10 +83,10 @@ public static class ConfigStore
         }
         catch (JsonException ex)
         {
-            throw new ConfigException($"'{path}' ist kein gueltiges JSON: {ex.Message}");
+            throw new ConfigException(I18n.Loc.T("error.badJson", path, ex.Message));
         }
 
-        if (cfg is null) throw new ConfigException($"'{path}' ist leer.");
+        if (cfg is null) throw new ConfigException(I18n.Loc.T("error.emptyFile", path));
         Validate(cfg, path);
         return cfg;
     }
@@ -100,7 +99,7 @@ public static class ConfigStore
 
     public static ModConfig LoadMod(string path)
     {
-        if (!File.Exists(path)) throw new ConfigException($"Keine Mod-Konfiguration unter '{path}'.");
+        if (!File.Exists(path)) throw new ConfigException(I18n.Loc.T("error.noModConfig", path));
 
         ModConfig? cfg;
         try
@@ -109,12 +108,12 @@ public static class ConfigStore
         }
         catch (JsonException ex)
         {
-            throw new ConfigException($"'{path}' ist kein gueltiges JSON: {ex.Message}");
+            throw new ConfigException(I18n.Loc.T("error.badJson", path, ex.Message));
         }
 
-        if (cfg is null) throw new ConfigException($"'{path}' ist leer.");
-        if (string.IsNullOrWhiteSpace(cfg.ModId)) throw new ConfigException($"'{path}' hat kein modId.");
-        if (cfg.Variants.Count == 0) throw new ConfigException($"'{path}' hat keine Variante.");
+        if (cfg is null) throw new ConfigException(I18n.Loc.T("error.emptyFile", path));
+        if (string.IsNullOrWhiteSpace(cfg.ModId)) throw new ConfigException(I18n.Loc.T("error.noModId", path));
+        if (cfg.Variants.Count == 0) throw new ConfigException(I18n.Loc.T("error.noVariant", path));
 
         // A mod config that does not say where its repo is only works from the
         // right working directory, which is exactly the class of failure this
@@ -168,18 +167,18 @@ public static class ConfigStore
         var partial = mods.Where(m => m.Config.ModId.Contains(modIdOrPath, StringComparison.OrdinalIgnoreCase)).ToList();
         if (partial.Count == 1) return partial[0];
         if (partial.Count > 1)
-            throw new ConfigException(
-                $"'{modIdOrPath}' passt auf mehrere Mods: {string.Join(", ", partial.Select(m => m.Config.ModId))}.");
+            throw new ConfigException(I18n.Loc.T("error.modAmbiguous", modIdOrPath,
+                string.Join(", ", partial.Select(m => m.Config.ModId))));
 
-        var known = mods.Count == 0 ? "(keine registriert)" : string.Join(", ", mods.Select(m => m.Config.ModId));
-        var note = missing.Count > 0 ? $" Nicht mehr vorhanden: {string.Join(", ", missing)}." : "";
-        throw new ConfigException($"Kein Mod '{modIdOrPath}'. Bekannt: {known}.{note}");
+        var known = mods.Count == 0 ? I18n.Loc.T("error.noneRegistered") : string.Join(", ", mods.Select(m => m.Config.ModId));
+        var note = missing.Count > 0 ? " " + I18n.Loc.T("error.goneMissing", string.Join(", ", missing)) : "";
+        throw new ConfigException(I18n.Loc.T("error.noSuchMod", modIdOrPath, known) + note);
     }
 
     private static void Validate(MachineConfig cfg, string path)
     {
-        if (string.IsNullOrWhiteSpace(cfg.GameRoot)) throw new ConfigException($"'{path}': gameRoot fehlt.");
-        if (string.IsNullOrWhiteSpace(cfg.UserDataRoot)) throw new ConfigException($"'{path}': userDataRoot fehlt.");
+        if (string.IsNullOrWhiteSpace(cfg.GameRoot)) throw new ConfigException(I18n.Loc.T("error.missingSetting", path, "gameRoot"));
+        if (string.IsNullOrWhiteSpace(cfg.UserDataRoot)) throw new ConfigException(I18n.Loc.T("error.missingSetting", path, "userDataRoot"));
 
         // The single most destructive mistake this tool could make: pointing the
         // isolated user data folder at the live one. Checked here so it cannot
@@ -187,19 +186,19 @@ public static class ConfigStore
         var live = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "7DaysToDie");
         if (PathsEqual(cfg.UserDataRoot, live))
-            throw new ConfigException($"'{path}': userDataRoot zeigt auf die LIVE-Daten ({live}).");
+            throw new ConfigException(I18n.Loc.T("error.userDataRootIsLive", path, live));
 
         foreach (var dup in cfg.Versions.GroupBy(v => v.Id, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1))
-            throw new ConfigException($"'{path}': Version '{dup.Key}' ist doppelt eingetragen.");
+            throw new ConfigException(I18n.Loc.T("error.duplicateVersion", path, dup.Key));
 
         foreach (var (key, dep) in cfg.DependencyLibrary)
         {
             if (string.IsNullOrWhiteSpace(dep.Folder))
-                throw new ConfigException($"'{path}': Abhaengigkeit '{key}' hat kein folder.");
+                throw new ConfigException(I18n.Loc.T("error.depNoFolder", path, key));
             foreach (var req in dep.Requires)
             {
                 if (!cfg.DependencyLibrary.ContainsKey(req))
-                    throw new ConfigException($"'{path}': '{key}' verlangt '{req}', das nicht in dependencyLibrary steht.");
+                    throw new ConfigException(I18n.Loc.T("error.depUnknownRequire", path, key, req));
             }
         }
     }

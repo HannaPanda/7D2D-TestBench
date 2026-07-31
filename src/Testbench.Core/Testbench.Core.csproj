@@ -6,4 +6,16 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Catalogs travel inside the assembly, so the tool speaks all thirteen
+         languages even when someone unpacks only the exe. The same files are
+         copied next to it as well: that copy is editable, wins over the
+         embedded one, and is how a translation gets fixed without a build. -->
+    <EmbeddedResource Include="I18n\lang\*.json" />
+    <!-- Link, not LinkBase: the copy has to land in "lang" next to the exe, which
+         is where Loc.LangDir looks. LinkBase keeps the I18n\lang\ nesting. -->
+    <None Include="I18n\lang\*.json" CopyToOutputDirectory="PreserveNewest"
+          Link="lang\%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

@@ -1,5 +1,6 @@
 using Testbench.Core.Config;
 using Testbench.Core.Diagnostics;
+using Testbench.Core.I18n;
 
 namespace Testbench.Cli.Commands;
 
@@ -11,7 +12,7 @@ public static class ConfigCommands
         var path = ctx.MachinePath;
         if (File.Exists(path) && !ctx.Args.Flag("force"))
         {
-            ctx.Out.Warn($"'{path}' existiert schon. Mit --force ueberschreiben.");
+            ctx.Out.Warn(Loc.T("cli.init.exists", path));
             return ctx.Out.Finish("init", ExitCodes.SetupError, new { path, existed = true });
         }
 
@@ -19,18 +20,38 @@ public static class ConfigCommands
                         ?? Path.GetDirectoryName(Path.GetFullPath(path))
                         ?? Directory.GetCurrentDirectory();
 
-        var cfg = new MachineConfig
-        {
-            GameRoot = ctx.Args.Get("game-root") ?? @"E:\Games",
-            ResultRoot = Path.Combine(benchRoot, "results"),
-            StateRoot = Path.Combine(benchRoot, "state"),
-        };
+        // Everything under one folder, derived from where the tool was unpacked.
+        // Nothing here may assume a drive letter or a user name: this is the first
+        // thing a stranger runs.
+        var cfg = MachineConfig.ForBenchRoot(benchRoot, ctx.Args.Get("game-root"));
         if (ctx.Args.Get("user-data-root") is { } udr) cfg.UserDataRoot = udr;
+        if (ctx.Args.Get("lang") is { } lang) cfg.Language = Loc.Resolve(lang);
 
+        Directory.CreateDirectory(cfg.GameRoot);
         ConfigStore.SaveMachine(cfg, path);
-        ctx.Out.Good($"Angelegt: {path}");
-        ctx.Out.Info("Weiter mit: tb import --psd1 <alte Testbench.psd1>   oder   tb versions add <version>");
-        return ctx.Out.Finish("init", ExitCodes.Ok, new { path });
+
+        ctx.Out.Good(Loc.T("cli.init.created", path));
+        ctx.Out.Detail($"gameRoot     {cfg.GameRoot}");
+        ctx.Out.Detail($"userDataRoot {cfg.UserDataRoot}");
+
+        // Where the played installation is, so it can be kept out of this. A test
+        // run sweeps foreign mods aside; pointed at that folder it would take
+        // somebody's modlist apart.
+        var live = SteamLocator.LiveInstall();
+        if (live is not null)
+        {
+            ctx.Out.Info(Loc.T("cli.init.steamFound", live));
+            ctx.Out.Warn(Loc.T("cli.init.steamWarn"));
+        }
+
+        ctx.Out.Info(Loc.T("cli.init.next", cfg.GameRoot));
+        return ctx.Out.Finish("init", ExitCodes.Ok, new
+        {
+            path,
+            gameRoot = cfg.GameRoot,
+            userDataRoot = cfg.UserDataRoot,
+            liveInstall = live,
+        });
     }
 
     /// <summary>
@@ -55,7 +76,7 @@ public static class ConfigCommands
 
         if (File.Exists(modOut) && !ctx.Args.Flag("force"))
         {
-            ctx.Out.Warn($"'{modOut}' existiert schon. Mit --force ueberschreiben.");
+            ctx.Out.Warn(Loc.T("cli.init.exists", modOut));
             return ctx.Out.Finish("import", ExitCodes.SetupError, new { modOut, existed = true });
         }
 
@@ -66,11 +87,14 @@ public static class ConfigCommands
         if (!registered) machine.ModConfigs.Add(modOut);
         ConfigStore.SaveMachine(machine, ctx.MachinePath);
 
-        ctx.Out.Good($"Maschinenkonfiguration: {ctx.MachinePath}");
-        ctx.Out.Good($"Mod-Konfiguration:      {modOut}");
-        ctx.Out.Info($"Mod '{imported.Mod.ModId}', Varianten: {string.Join(", ", imported.Mod.Variants.Select(v => v.Name))}");
-        ctx.Out.Info($"Abhaengigkeiten: {(imported.Mod.Dependencies.Count == 0 ? "keine" : string.Join(", ", imported.Mod.Dependencies))}");
-        ctx.Out.Info($"Profile: {string.Join(", ", imported.Mod.Profiles.Select(p => p.Name))}");
+        ctx.Out.Good(Loc.T("cli.import.machineConfig", ctx.MachinePath));
+        ctx.Out.Good(Loc.T("cli.import.modConfig", modOut));
+        ctx.Out.Info(Loc.T("cli.import.modLine", imported.Mod.ModId,
+            string.Join(", ", imported.Mod.Variants.Select(v => v.Name))));
+        ctx.Out.Info(Loc.T("cli.import.dependencies", imported.Mod.Dependencies.Count == 0
+            ? Loc.T("cli.none")
+            : string.Join(", ", imported.Mod.Dependencies)));
+        ctx.Out.Info(Loc.T("cli.import.profiles", string.Join(", ", imported.Mod.Profiles.Select(p => p.Name))));
         foreach (var note in imported.Notes) ctx.Out.Warn(note);
 
         return ctx.Out.Finish("import", ExitCodes.Ok, new
@@ -97,10 +121,11 @@ public static class ConfigCommands
         var runs = ctx.Store.ImportGuiVerified(full, mod.ModId);
 
         foreach (var r in runs)
-            ctx.Out.Good($"{r.VersionId} / {r.Variant} / Mod {r.ModVersion}: Sicht {r.Visual}, Nachweis {r.EvidenceOk} -> {r.Id}");
+            ctx.Out.Good(Loc.T("cli.importGui.line", r.VersionId, r.Variant, r.ModVersion,
+                r.Visual.ToString(), r.EvidenceOk?.ToString() ?? "-", r.Id));
 
-        if (runs.Count == 0) ctx.Out.Warn($"Aus '{full}' war nichts zu uebernehmen.");
-        else ctx.Out.Info($"{runs.Count} Eintrag/Eintraege als GUI-Laeufe von '{mod.ModId}' uebernommen.");
+        if (runs.Count == 0) ctx.Out.Warn(Loc.T("cli.importGui.nothing", full));
+        else ctx.Out.Info(Loc.T("cli.importGui.count", runs.Count, mod.ModId));
 
         return ctx.Out.Finish("import.guiVerified", ExitCodes.Ok, new
         {
@@ -131,9 +156,9 @@ public static class ConfigCommands
         if (!ctx.Out.IsJson)
         {
             Console.WriteLine();
-            if (worst == CheckLevel.Ok) ctx.Out.Good("Alles in Ordnung.");
-            else if (worst == CheckLevel.Warn) ctx.Out.Warn("Laeuft, mit Anmerkungen.");
-            else ctx.Out.Bad("So kann kein Lauf stattfinden.");
+            if (worst == CheckLevel.Ok) ctx.Out.Good(Loc.T("cli.doctor.allGood"));
+            else if (worst == CheckLevel.Warn) ctx.Out.Warn(Loc.T("cli.doctor.withNotes"));
+            else ctx.Out.Bad(Loc.T("cli.doctor.noRunPossible"));
         }
 
         return ctx.Out.Finish("doctor", code, new
@@ -155,7 +180,7 @@ public static class ConfigCommands
             var id = ctx.Args.Verb(2) ?? ctx.Args.Get("version");
 
             if (id is null && pathArg is null)
-                throw new UsageException("Version fehlt: tb versions add <version>   oder   tb versions add --path <ordner>");
+                throw new UsageException(Loc.T("cli.versions.addUsage"));
 
             // With a folder, the installation is asked what it is instead of the
             // person being asked to type it correctly.
@@ -163,23 +188,21 @@ public static class ConfigCommands
             if (pathArg is not null)
             {
                 var probe = Path.GetFullPath(pathArg);
-                if (!Directory.Exists(probe)) throw new ConfigException($"Ordner fehlt: {probe}");
+                if (!Directory.Exists(probe)) throw new ConfigException(Loc.T("cli.folderMissing", probe));
                 found = VersionScanner.Inspect(probe, ctx.Machine);
                 pathArg = probe;
 
                 if (id is null)
                 {
                     id = found.ProposedId
-                         ?? throw new ConfigException(
-                             $"In '{probe}' war keine Version zu erkennen. Mit 'tb versions add <version> --path {probe}' selbst angeben.");
-                    ctx.Out.Info($"Erkannt: {id} ({found.Explain()})");
+                         ?? throw new ConfigException(Loc.T("cli.versions.notDetected", probe));
+                    ctx.Out.Info(Loc.T("cli.versions.detected", id, found.Explain()));
                 }
 
                 if (found.Mismatch && !ctx.Args.Flag("force"))
                 {
-                    ctx.Out.Bad($"'{probe}': {found.Explain()}");
-                    ctx.Out.Info("Das ist die Falle, die jeden Report luegen laesst. Ordner umbenennen, " +
-                                 "oder mit --force und ausdruecklicher --version eintragen.");
+                    ctx.Out.Bad($"{probe}: {found.Explain()}");
+                    ctx.Out.Info(Loc.T("cli.versions.mismatchHint"));
                     return ctx.Out.Finish("versions.add", ExitCodes.SetupError, new
                     {
                         dir = probe, mismatch = true, idFromFolder = found.IdFromFolder, idFromBuild = found.IdFromBuild,
@@ -189,7 +212,7 @@ public static class ConfigCommands
 
             if (ctx.Machine.FindVersion(id!) is not null)
             {
-                ctx.Out.Warn($"Version '{id}' ist schon eingetragen.");
+                ctx.Out.Warn(Loc.T("cli.versions.exists", id));
                 return ctx.Out.Finish("versions.add", ExitCodes.SetupError, new { id, existed = true });
             }
 
@@ -219,20 +242,20 @@ public static class ConfigCommands
             ctx.SaveMachine();
 
             var dir = ctx.Machine.GameDir(id!);
-            ctx.Out.Good($"Version '{id}' eingetragen: {dir}");
+            ctx.Out.Good(Loc.T("cli.versions.added", id, dir));
             if (entry.Build is not null) ctx.Out.Detail($"Build {entry.Build}");
 
             if (!File.Exists(Path.Combine(dir, "7DaysToDie.exe")))
             {
                 Directory.CreateDirectory(dir);
-                ctx.Out.Warn($"Dort liegt noch keine 7DaysToDie.exe.");
+                ctx.Out.Warn(Loc.T("cli.versions.noExeYet"));
                 // Deliberately only printed, never run: DepotDownloader asks for
                 // the Steam password and the Steam Guard code, and those belong to
                 // the person, not to this tool.
                 var branch = entry.Branch ?? $"v{id}";
-                ctx.Out.Info("Installation holen (Passwort und Steam-Guard-Code gibst du selbst ein):");
-                ctx.Out.Info($"  DepotDownloader -app 251570 -depot 251576 -branch {branch} -dir \"{dir}\" -username <dein-steam-name>");
-                ctx.Out.Info("Danach in Mods\\ nur 0_TFP_Harmony lassen; ab dem zweiten Lauf raeumt der Bench selbst.");
+                ctx.Out.Info(Loc.T("cli.versions.depotIntro"));
+                ctx.Out.Info($"  DepotDownloader -app 251570 -depot 251576 -branch {branch} -dir \"{dir}\" -username <your-steam-name>");
+                ctx.Out.Info(Loc.T("cli.versions.depotHint"));
             }
 
             return ctx.Out.Finish("versions.add", ExitCodes.Ok, new { id, dir, branch = entry.Branch, build = entry.Build });
@@ -241,16 +264,16 @@ public static class ConfigCommands
         if (sub is "remove" or "rm")
         {
             var id = ctx.Args.Verb(2) ?? ctx.Args.Get("version")
-                     ?? throw new UsageException("Version fehlt: tb versions remove <version>");
+                     ?? throw new UsageException(Loc.T("cli.versions.removeUsage"));
             var hit = ctx.Machine.FindVersion(id);
             if (hit is null)
             {
-                ctx.Out.Warn($"Version '{id}' war nicht eingetragen.");
+                ctx.Out.Warn(Loc.T("cli.versions.notRegistered", id));
                 return ctx.Out.Finish("versions.remove", ExitCodes.SetupError, new { id });
             }
             ctx.Machine.Versions.Remove(hit);
             ctx.SaveMachine();
-            ctx.Out.Good($"Version '{id}' entfernt. Die Installation unter {ctx.Machine.GameDir(id)} bleibt liegen.");
+            ctx.Out.Good(Loc.T("cli.versions.removed", id, ctx.Machine.GameDir(id)));
             return ctx.Out.Finish("versions.remove", ExitCodes.Ok, new { id });
         }
 
@@ -266,7 +289,9 @@ public static class ConfigCommands
             rows.Add(new[]
             {
                 v.Id,
-                installed ? (drifted ? "GEAENDERT" : "installiert") : "FEHLT",
+                installed
+                    ? Loc.T(drifted ? "cli.versions.statusChanged" : "cli.versions.statusInstalled")
+                    : Loc.T("cli.versions.statusMissing"),
                 build ?? v.Build ?? "",
                 v.Branch ?? "",
                 dir,
@@ -274,9 +299,9 @@ public static class ConfigCommands
             });
             data.Add(new { id = v.Id, installed, build, registeredBuild = v.Build, drifted, branch = v.Branch, dir, notes = v.Notes });
         }
-        ctx.Out.Table(rows, "Version", "Status", "Build", "Branch", "Ordner", "Notiz");
-        if (rows.Count == 0)
-            ctx.Out.Warn("Keine Version eingetragen. tb versions scan --add   oder   tb versions add <version>");
+        ctx.Out.Table(rows, Loc.T("col.version"), Loc.T("col.status"), "Build", Loc.T("col.branch"),
+            Loc.T("col.folder"), Loc.T("col.notes"));
+        if (rows.Count == 0) ctx.Out.Warn(Loc.T("cli.versions.none"));
 
         return ctx.Out.Finish("versions", ExitCodes.Ok, new { versions = data });
     }
@@ -294,21 +319,25 @@ public static class ConfigCommands
         root = Path.GetFullPath(root);
         var depth = int.TryParse(ctx.Args.Get("depth"), out var d) ? d : 2;
 
-        if (!Directory.Exists(root)) throw new ConfigException($"Ordner fehlt: {root}");
+        if (!Directory.Exists(root)) throw new ConfigException(Loc.T("cli.folderMissing", root));
 
         var found = VersionScanner.Scan(root, ctx.Machine, depth);
-        ctx.Out.Info($"Gesucht in {root} (Tiefe {depth}): {found.Count} Installation(en).");
+        ctx.Out.Info(Loc.T("cli.scan.searched", root, depth, found.Count));
 
         var rows = found.Select(c => new[]
         {
             c.ProposedId ?? "?",
-            c.Registered ? "eingetragen" : c.Mismatch ? "WIDERSPRUCH" : c.ProposedId is null ? "unklar" : "neu",
+            Loc.T(c.Registered ? "cli.versions.statusRegistered"
+                : c.IsLiveInstall ? "cli.versions.statusLive"
+                : c.Mismatch ? "cli.versions.statusConflict"
+                : c.ProposedId is null ? "cli.versions.statusUnclear"
+                : "cli.versions.statusNew"),
             c.Dir,
             c.Explain(),
         }).ToList();
-        ctx.Out.Table(rows, "Version", "Status", "Ordner", "Woher");
+        ctx.Out.Table(rows, Loc.T("col.version"), Loc.T("col.status"), Loc.T("col.folder"), Loc.T("col.source"));
 
-        var addable = found.Where(c => c is { HasExe: true, Registered: false, ProposedId: not null }
+        var addable = found.Where(c => c is { Blocked: false, Registered: false, ProposedId: not null }
                                        && (!c.Mismatch || ctx.Args.Flag("force"))).ToList();
 
         var added = new List<object>();
@@ -324,14 +353,13 @@ public static class ConfigCommands
                 entry!.Build = c.Build;
                 noted++;
             }
-            if (noted > 0) ctx.Out.Detail($"Build fuer {noted} schon eingetragene Version(en) notiert.");
+            if (noted > 0) ctx.Out.Detail(Loc.T("cli.scan.notedBuilds", noted));
 
             foreach (var c in addable)
             {
                 if (ctx.Machine.FindVersion(c.ProposedId!) is not null)
                 {
-                    ctx.Out.Warn($"'{c.ProposedId}' ist schon eingetragen, aber mit einem anderen Ordner. " +
-                                 $"Uebersprungen: {c.Dir}");
+                    ctx.Out.Warn(Loc.T("cli.scan.skipDifferentFolder", c.ProposedId!, c.Dir));
                     continue;
                 }
 
@@ -343,7 +371,7 @@ public static class ConfigCommands
                     Build = c.Build,
                     Branch = $"v{c.ProposedId}",
                 });
-                ctx.Out.Good($"Eingetragen: {c.ProposedId} <- {c.Dir}");
+                ctx.Out.Good(Loc.T("cli.scan.added", c.ProposedId!, c.Dir));
                 added.Add(new { id = c.ProposedId, dir = c.Dir, build = c.Build });
             }
 
@@ -352,15 +380,18 @@ public static class ConfigCommands
                 ctx.Machine.Versions.Sort((a, b) => string.Compare(a.Id, b.Id, StringComparison.OrdinalIgnoreCase));
                 ctx.SaveMachine();
             }
-            if (added.Count == 0) ctx.Out.Info("Keine neue Version einzutragen.");
+            if (added.Count == 0) ctx.Out.Info(Loc.T("cli.scan.noNew"));
         }
         else if (addable.Count > 0)
         {
-            ctx.Out.Info($"{addable.Count} neu. Mit 'tb versions scan --root \"{root}\" --add' eintragen.");
+            ctx.Out.Info(Loc.T("cli.scan.newCount", addable.Count, root));
         }
 
         foreach (var c in found.Where(c => c.Mismatch))
-            ctx.Out.Warn($"{c.Dir}: {c.Explain()}. Nicht eingetragen ohne --force.");
+            ctx.Out.Warn(Loc.T("cli.scan.refused", c.Dir, c.Explain()));
+
+        foreach (var c in found.Where(c => c.IsLiveInstall))
+            ctx.Out.Warn(Loc.T("cli.scan.liveRefused", c.Dir));
 
         return ctx.Out.Finish("versions.scan", ExitCodes.Ok, new
         {
@@ -375,6 +406,7 @@ public static class ConfigCommands
                 idFromFolder = c.IdFromFolder,
                 idFromBuild = c.IdFromBuild,
                 mismatch = c.Mismatch,
+                isLiveInstall = c.IsLiveInstall,
                 registeredAs = c.RegisteredAs,
                 hasHarmony = c.HasHarmony,
                 mods = c.Mods,
@@ -390,7 +422,7 @@ public static class ConfigCommands
         if (sub is "add")
         {
             var raw = ctx.Args.Verb(2) ?? ctx.Args.Get("path")
-                      ?? throw new UsageException("Pfad fehlt: tb mods add <pfad-zur-testbench.mod.json>");
+                      ?? throw new UsageException(Loc.T("cli.mods.addUsage"));
             var path = Path.GetFullPath(raw);
 
             // A directory is accepted too, because "the mod's test folder" is what
@@ -402,27 +434,27 @@ public static class ConfigCommands
                     Path.Combine(path, ConfigStore.ModFileName),
                     Path.Combine(path, "test", ConfigStore.ModFileName),
                 }.FirstOrDefault(File.Exists);
-                if (guess is null) throw new ConfigException($"In '{path}' liegt keine {ConfigStore.ModFileName}.");
+                if (guess is null) throw new ConfigException(Loc.T("cli.mods.noModJson", path, ConfigStore.ModFileName));
                 path = guess;
             }
 
             var mod = ConfigStore.LoadMod(path);
             if (ctx.Machine.ModConfigs.Any(p => ConfigStore.PathsEqual(p, path)))
             {
-                ctx.Out.Warn($"'{path}' war schon registriert.");
+                ctx.Out.Warn(Loc.T("cli.mods.alreadyRegistered", path));
             }
             else
             {
                 ctx.Machine.ModConfigs.Add(path);
                 ctx.SaveMachine();
-                ctx.Out.Good($"Registriert: {mod.ModId} <- {path}");
+                ctx.Out.Good(Loc.T("cli.mods.registered", mod.ModId, path));
             }
             return ctx.Out.Finish("mods.add", ExitCodes.Ok, new { modId = mod.ModId, path });
         }
 
         if (sub is "remove" or "rm")
         {
-            var what = ctx.Args.Verb(2) ?? throw new UsageException("tb mods remove <modId|pfad>");
+            var what = ctx.Args.Verb(2) ?? throw new UsageException(Loc.T("cli.mods.removeUsage"));
             var before = ctx.Machine.ModConfigs.Count;
 
             ctx.Machine.ModConfigs.RemoveAll(p =>
@@ -434,11 +466,11 @@ public static class ConfigCommands
 
             if (ctx.Machine.ModConfigs.Count == before)
             {
-                ctx.Out.Warn($"Nichts entfernt: '{what}' war nicht registriert.");
+                ctx.Out.Warn(Loc.T("cli.mods.nothingRemoved", what));
                 return ctx.Out.Finish("mods.remove", ExitCodes.SetupError, new { what });
             }
             ctx.SaveMachine();
-            ctx.Out.Good($"Entfernt: {what}. Die Datei selbst bleibt liegen.");
+            ctx.Out.Good(Loc.T("cli.mods.removed", what));
             return ctx.Out.Finish("mods.remove", ExitCodes.Ok, new { what });
         }
 
@@ -451,9 +483,10 @@ public static class ConfigCommands
             string.Join(", ", m.Config.Dependencies),
             string.Join(", ", m.Config.Profiles.Select(p => p.Name)),
         }).ToList();
-        ctx.Out.Table(rows, "modId", "Name", "Varianten", "Abhaengigkeiten", "Profile");
-        foreach (var m in missing) ctx.Out.Warn($"Registrierte Datei fehlt: {m}");
-        if (rows.Count == 0) ctx.Out.Warn("Kein Mod registriert. tb mods add <pfad>");
+        ctx.Out.Table(rows, "modId", Loc.T("col.name"), Loc.T("col.variants"), Loc.T("col.dependencies"),
+            Loc.T("col.profiles"));
+        foreach (var m in missing) ctx.Out.Warn(Loc.T("cli.mods.fileMissing", m));
+        if (rows.Count == 0) ctx.Out.Warn(Loc.T("cli.mods.none"));
 
         return ctx.Out.Finish("mods", ExitCodes.Ok, new
         {
@@ -471,6 +504,78 @@ public static class ConfigCommands
         });
     }
 
+    /// <summary>
+    /// Shows, sets and checks the language. The check exists because a catalog is
+    /// a hand-editable file: anyone can drop one into lang\ and needs to be told
+    /// which keys they have not filled in yet.
+    /// </summary>
+    public static int Lang(CommandContext ctx)
+    {
+        var wanted = ctx.Args.Verb(1) ?? ctx.Args.Get("set");
+
+        if (ctx.Args.Flag("check"))
+        {
+            var target = wanted is null ? Loc.Current : Loc.Resolve(wanted);
+            var missing = Loc.MissingKeys(target);
+
+            if (missing.Count == 0) ctx.Out.Good(Loc.T("cli.lang.complete", target));
+            else
+            {
+                ctx.Out.Warn(Loc.T("cli.lang.missing", target, missing.Count));
+                foreach (var key in missing) ctx.Out.Detail("  " + key);
+            }
+
+            return ctx.Out.Finish("lang.check", ExitCodes.Ok, new { language = target, missing });
+        }
+
+        if (wanted is not null)
+        {
+            var code = Loc.Resolve(wanted);
+            Loc.Use(code);
+
+            // Written to the config only when there is one; "tb lang english"
+            // before "tb init" should still work and just affect this call.
+            var saved = false;
+            if (File.Exists(ctx.MachinePath))
+            {
+                ctx.Machine.Language = code;
+                ctx.SaveMachine();
+                saved = true;
+            }
+
+            ctx.Out.Good(Loc.T("cli.lang.set", Loc.NativeName(code), code));
+            if (!saved) ctx.Out.Warn(Loc.T("cli.lang.notSaved", ctx.MachinePath));
+            return ctx.Out.Finish("lang", ExitCodes.Ok, new { language = code, saved });
+        }
+
+        var rows = new List<string[]>();
+        foreach (var code in Loc.Available())
+        {
+            var state = new List<string>();
+            if (code == Loc.Current) state.Add(Loc.T("cli.lang.inUse"));
+            if (code == Loc.FromSystem()) state.Add(Loc.T("cli.lang.system"));
+            var gaps = Loc.MissingKeys(code).Count;
+            if (gaps > 0) state.Add(Loc.T("cli.lang.gaps", gaps));
+
+            rows.Add(new[] { code, Loc.NativeName(code), string.Join(", ", state) });
+        }
+        ctx.Out.Table(rows, Loc.T("col.language"), Loc.T("col.nativeName"), Loc.T("col.state"));
+        ctx.Out.Info(Loc.T("cli.lang.hint", Loc.LangDir));
+
+        return ctx.Out.Finish("lang", ExitCodes.Ok, new
+        {
+            current = Loc.Current,
+            system = Loc.FromSystem(),
+            langDir = Loc.LangDir,
+            languages = Loc.Available().Select(c => new
+            {
+                code = c,
+                nativeName = Loc.NativeName(c),
+                missingKeys = Loc.MissingKeys(c).Count,
+            }),
+        });
+    }
+
     public static int Profiles(CommandContext ctx)
     {
         var (mod, path) = ctx.RequireMod();
@@ -478,13 +583,14 @@ public static class ConfigCommands
         {
             p.Name,
             p.Variant ?? mod.Variants.FirstOrDefault()?.Name ?? "",
-            p.Versions.Count == 0 ? "(alle)" : string.Join(", ", p.Versions),
+            p.Versions.Count == 0 ? Loc.T("cli.profiles.all") : string.Join(", ", p.Versions),
             string.Join("+", p.Stages.Select(s => s.ToString().ToLowerInvariant())),
             p.Notes ?? "",
         }).ToList();
 
-        ctx.Out.Table(rows, "Profil", "Variante", "Versionen", "Stufen", "Notiz");
-        if (rows.Count == 0) ctx.Out.Warn($"'{mod.ModId}' hat keine Profile. In {path} unter 'profiles' anlegen.");
+        ctx.Out.Table(rows, Loc.T("col.profile"), Loc.T("col.variant"), Loc.T("col.versions"),
+            Loc.T("col.stages"), Loc.T("col.notes"));
+        if (rows.Count == 0) ctx.Out.Warn(Loc.T("cli.profiles.none", mod.ModId, path));
 
         return ctx.Out.Finish("profiles", ExitCodes.Ok, new
         {

@@ -7,6 +7,7 @@ using System.Windows;
 using Testbench.Core.Config;
 using Testbench.Core.Deploy;
 using Testbench.Core.Diagnostics;
+using Testbench.Core.I18n;
 using Testbench.Core.Model;
 using Testbench.Core.Report;
 using Testbench.Core.Run;
@@ -37,7 +38,7 @@ public sealed class VersionItem : Notifier
         set => Set(ref _selected, value);
     }
 
-    public string Label => Installed ? Id : $"{Id} (fehlt)";
+    public string Label => Installed ? Id : $"{Id} ({Loc.T("gui.missing")})";
 }
 
 /// <summary>A finished run, as one card on the right.</summary>
@@ -54,11 +55,12 @@ public sealed class RunCard
         Detail = run.Status is RunStatus.Missing or RunStatus.SetupError
             ? run.Note ?? ""
             : $"{a.GameVersion}\n" +
-              $"Mod {run.ModName} {run.ModVersion}: {(a.ModLoaded ? "geladen" : "NICHT GELADEN")}, " +
-              $"Harmony {(a.HarmonyApplied ? "ja" : "nein")}\n" +
-              $"ERR {a.Errors}  EXC {a.Exceptions}  XML {a.XmlProblems}  ignoriert {a.Ignored}\n" +
+              Loc.T("gui.card.mod", run.ModName, run.ModVersion,
+                  Loc.T(a.ModLoaded ? "cli.run.loaded" : "cli.run.notLoaded"),
+                  Loc.T(a.HarmonyApplied ? "report.yes" : "report.no")) + "\n" +
+              Loc.T("gui.card.counters", a.Errors, a.Exceptions, a.XmlProblems, a.Ignored) + "\n" +
               string.Join("\n", run.Dependencies.Select(d =>
-                  $"{d.Folder}: {(d.Problem is null ? "geladen" : d.Problem)}"));
+                  $"{d.Folder}: {d.Problem ?? Loc.T("cli.run.loaded")}"));
     }
 
     public RunRecord Run { get; }
@@ -77,12 +79,13 @@ public sealed class PendingItem
     {
         Run = run;
         Header = $"{run.ModDisplayName} {run.ModVersion} - {run.VersionId} / {run.Variant}";
-        Question = run.VisualQuestion ?? "Sah/verhielt sich alles wie erwartet?";
+        Question = run.VisualQuestion ?? Loc.T("gui.pending.defaultQuestion");
+        var label = run.EvidenceLabel ?? Loc.T("report.evidenceFallback");
         Evidence = run.EvidenceOk switch
         {
-            true => $"{run.EvidenceLabel}: ja",
-            false => $"{run.EvidenceLabel}: NEIN ({string.Join(", ", run.MissingEvidence)})",
-            _ => $"{run.EvidenceLabel ?? "Lognachweis"}: kein Muster konfiguriert",
+            true => Loc.T("gui.pending.evidenceYes", label),
+            false => Loc.T("gui.pending.evidenceNo", label, string.Join(", ", run.MissingEvidence)),
+            _ => Loc.T("gui.pending.evidenceNoPattern", label),
         };
         EvidenceOk = run.EvidenceOk != false;
     }
@@ -121,6 +124,12 @@ public sealed class MainViewModel : Notifier
             Machine = new MachineConfig();
             ConfigProblem = ex.Message;
         }
+
+        // Language before anything is shown, and the window follows a switch
+        // without a restart.
+        Loc.Use(Machine.Language);
+        Languages = Loc.Available().Select(c => new LanguageChoice(c, Loc.NativeName(c))).ToList();
+        _selectedLanguage = Languages.FirstOrDefault(l => l.Code == Loc.Current);
 
         Store = new RunStore(Machine);
         LoadMods();
@@ -191,6 +200,35 @@ public sealed class MainViewModel : Notifier
         set { if (Set(ref _stageGui, value)) OnChanged(nameof(CanRun)); }
     }
 
+    /// <summary>
+    /// Language menu. Switching writes the choice to the machine config, because
+    /// having to pick the language again on every start is the kind of small
+    /// annoyance that makes a tool feel broken.
+    /// </summary>
+    public List<LanguageChoice> Languages { get; }
+
+    private LanguageChoice? _selectedLanguage;
+    public LanguageChoice? SelectedLanguage
+    {
+        get => _selectedLanguage;
+        set
+        {
+            if (!Set(ref _selectedLanguage, value) || value is null) return;
+            Loc.Use(value.Code);
+            Machine.Language = value.Code;
+            try
+            {
+                ConfigStore.SaveMachine(Machine, _machinePath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex.Message, LogKind.Warn);
+            }
+            RefreshPending();
+            RefreshReport();
+        }
+    }
+
     private bool _skipDeploy;
     public bool SkipDeploy
     {
@@ -248,7 +286,7 @@ public sealed class MainViewModel : Notifier
         var versions = Versions.Where(v => v.IsSelected).Select(v => v.Id).ToList();
         if (versions.Count == 0)
         {
-            Log("Keine Version ausgewaehlt.", LogKind.Warn);
+            Log(Loc.T("gui.noVersionSelected"), LogKind.Warn);
             return;
         }
 
@@ -259,7 +297,7 @@ public sealed class MainViewModel : Notifier
         var running = GameLauncher.RunningInstances();
         if (running.Length > 0)
         {
-            Log($"7DaysToDie laeuft schon (PID {running[0].Id}). Erst beenden.", LogKind.Bad);
+            Log(Loc.T("gui.gameAlreadyRunning", running[0].Id), LogKind.Bad);
             foreach (var p in running) p.Dispose();
             return;
         }
@@ -278,8 +316,10 @@ public sealed class MainViewModel : Notifier
                 using var runLock = RunLock.TryAcquire(Machine.StateRoot, "GUI", what, out var holder);
                 if (runLock is null)
                 {
-                    var who = holder is null ? "Ein anderer Lauf" : $"{holder.Owner} (PID {holder.Pid})";
-                    Log($"Blockiert: {who} macht gerade '{holder?.What}'.", LogKind.Bad);
+                    var who = holder is null
+                        ? Loc.T("gui.someOtherRun")
+                        : $"{holder.Owner} (PID {holder.Pid})";
+                    Log(Loc.T("gui.blockedBy", who, holder?.What ?? "?"), LogKind.Bad);
                     return;
                 }
 
@@ -294,7 +334,7 @@ public sealed class MainViewModel : Notifier
                         SetStatus($"{mod.ModId} / {variant.Name} / {version} / {stage.ToString().ToLowerInvariant()}");
                         Log($"=== {version} / {stage.ToString().ToLowerInvariant()} ===", LogKind.Info);
                         if (stage == TestStage.Gui)
-                            Log("Das Spiel startet mit Fenster. Der Lauf endet, wenn du es schliesst.", LogKind.Warn);
+                            Log(Loc.T("cli.run.guiHint"), LogKind.Warn);
 
                         var opts = new RunOptions
                         {
@@ -317,7 +357,7 @@ public sealed class MainViewModel : Notifier
         }
         catch (OperationCanceledException)
         {
-            Log("Abgebrochen.", LogKind.Warn);
+            Log(Loc.T("gui.cancelled"), LogKind.Warn);
         }
         catch (Exception ex)
         {
@@ -336,13 +376,13 @@ public sealed class MainViewModel : Notifier
     public void Cancel()
     {
         _cancel?.Cancel();
-        Log("Abbruch angefordert. Ein laufender Start wird beendet.", LogKind.Warn);
+        Log(Loc.T("gui.cancelRequested"), LogKind.Warn);
     }
 
     public void RunDoctor()
     {
         LogLines.Clear();
-        Log($"Konfiguration: {_machinePath}", LogKind.Info);
+        Log(Loc.T("doctor.configAt", _machinePath), LogKind.Info);
         foreach (var c in Doctor.Run(Machine, _machinePath))
         {
             var kind = c.Level switch
@@ -364,11 +404,14 @@ public sealed class MainViewModel : Notifier
         if (!string.IsNullOrWhiteSpace(note)) item.Run.VisualNote = note;
         Store.Save(item.Run);
 
-        Log($"{item.Run.VersionId}: Sichtpruefung {(ok ? "bestanden" : "NICHT bestanden")}",
+        Log(Loc.T("cli.verify.recorded", item.Run.VersionId,
+                Loc.T(ok ? "visual.passed" : "visual.failed")),
             ok ? LogKind.Good : LogKind.Bad);
 
         if (ok && item.Run.EvidenceOk == false)
-            Log($"Achtung: {item.Run.EvidenceLabel} fehlt trotzdem. Der Lauf zaehlt nicht als vollstaendig bestanden.",
+            Log(Loc.T("cli.verify.evidenceStillMissing",
+                    item.Run.EvidenceLabel ?? Loc.T("report.evidenceFallback"),
+                    string.Join(", ", item.Run.MissingEvidence)),
                 LogKind.Warn);
 
         RefreshPending();
@@ -384,7 +427,7 @@ public sealed class MainViewModel : Notifier
 
         var report = ReportBuilder.Build(SelectedMod, SelectedVariant.Name, modVersion, Store, versions);
         var path = ReportBuilder.Write(report, Machine);
-        Log($"Report: {path}", LogKind.Good);
+        Log(Loc.T("cli.report.written", path), LogKind.Good);
         return path;
     }
 
@@ -414,10 +457,11 @@ public sealed class MainViewModel : Notifier
         var report = ReportBuilder.Build(SelectedMod, SelectedVariant.Name, modVersion, Store, versions);
         TestedVersions = report.TestedVersions;
 
-        var lines = report.Rows.Select(r =>
-            $"{r.VersionId}: Stufe 1 {(r.Headless?.StatusText ?? "UNGETESTET")}, " +
-            $"Stufe 2 {(r.GuiOk ? "OK" : r.GuiNote)}");
-        ReportSummary = $"Mod-Version {(modVersion.Length > 0 ? modVersion : "unbekannt")}\n" +
+        var lines = report.Rows.Select(r => Loc.T("gui.report.row", r.VersionId,
+            r.Headless?.StatusText ?? RunStatusText.Of(RunStatus.Untested),
+            r.GuiOk ? RunStatusText.Of(RunStatus.Ok) : r.GuiNote));
+        ReportSummary = Loc.T("gui.report.modVersion",
+                            modVersion.Length > 0 ? modVersion : Loc.T("cli.unknown")) + "\n" +
                         string.Join("\n", lines);
     }
 
@@ -478,7 +522,7 @@ public sealed class MainViewModel : Notifier
         Mods.Clear();
         var registered = ConfigStore.LoadRegisteredMods(Machine, out var missing);
         foreach (var (mod, _) in registered) Mods.Add(mod);
-        foreach (var m in missing) Log($"Registrierte Mod-Konfiguration fehlt: {m}", LogKind.Warn);
+        foreach (var m in missing) Log(Loc.T("doctor.mods.configMissing", m), LogKind.Warn);
 
         ReloadVersions();
 

@@ -1,4 +1,5 @@
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 using Testbench.Core.Model;
 using Testbench.Core.Report;
 using Testbench.Core.Run;
@@ -21,9 +22,8 @@ public static class RunCommands
         if (profileName is not null)
         {
             var profile = mod.FindProfile(profileName)
-                          ?? throw new ConfigException(
-                              $"Mod '{mod.ModId}' hat kein Profil '{profileName}'. Bekannt: " +
-                              (mod.Profiles.Count == 0 ? "(keins)" : string.Join(", ", mod.Profiles.Select(p => p.Name))));
+                          ?? throw new ConfigException(Loc.T("cli.run.noSuchProfile", mod.ModId, profileName,
+                              mod.Profiles.Count == 0 ? Loc.T("cli.none") : string.Join(", ", mod.Profiles.Select(p => p.Name))));
 
             // Explicit arguments still win, so a profile can be used as a starting
             // point without editing it.
@@ -34,12 +34,11 @@ public static class RunCommands
 
         if (versions.Count == 0) versions = ctx.Machine.Versions.Select(v => v.Id).ToList();
         if (stages.Count == 0) stages = new List<TestStage> { TestStage.Headless };
-        if (versions.Count == 0) throw new ConfigException("Keine Version zu testen. tb versions add <version>");
+        if (versions.Count == 0) throw new ConfigException(Loc.T("cli.run.noVersions"));
 
         var variant = mod.FindVariant(variantName)
-                      ?? throw new ConfigException(
-                          $"Mod '{mod.ModId}' hat keine Variante '{variantName}'. Bekannt: " +
-                          string.Join(", ", mod.Variants.Select(v => v.Name)));
+                      ?? throw new ConfigException(Loc.T("cli.run.noSuchVariant", mod.ModId, variantName ?? "",
+                          string.Join(", ", mod.Variants.Select(v => v.Name))));
 
         var opts = new RunOptions
         {
@@ -55,10 +54,12 @@ public static class RunCommands
             opts.AskVisual = question =>
             {
                 Console.WriteLine();
-                Console.Write($"{question} [j/N] ");
-                var answer = Console.ReadLine() ?? "";
-                return answer.TrimStart().StartsWith("j", StringComparison.OrdinalIgnoreCase) ||
-                       answer.TrimStart().StartsWith("y", StringComparison.OrdinalIgnoreCase);
+                Console.Write($"{question} [{Loc.T("cli.yesKey")}/{Loc.T("cli.noKey")}] ");
+                var answer = (Console.ReadLine() ?? "").TrimStart();
+                // The localized yes-key and a plain "y" both count: a German
+                // console user types j, and everybody types y sooner or later.
+                return answer.StartsWith(Loc.T("cli.yesKey"), StringComparison.OrdinalIgnoreCase) ||
+                       answer.StartsWith("y", StringComparison.OrdinalIgnoreCase);
             };
         }
 
@@ -68,9 +69,9 @@ public static class RunCommands
         if (runLock is null)
         {
             var msg = holder is null
-                ? "Ein anderer Lauf haelt die Sperre."
-                : $"{holder.Owner} macht seit {holder.Since:HH:mm} '{holder.What}' (PID {holder.Pid}).";
-            ctx.Out.Bad("Blockiert: " + msg);
+                ? Loc.T("cli.run.lockedUnknown")
+                : Loc.T("cli.run.lockedBy", holder.Owner, holder.Since.ToString("HH:mm"), holder.What, holder.Pid);
+            ctx.Out.Bad(Loc.T("cli.run.blocked", msg));
             return ctx.Out.Finish("run", ExitCodes.Blocked, new { blocked = true, holder });
         }
 
@@ -87,7 +88,7 @@ public static class RunCommands
                     Console.WriteLine();
                     ctx.Out.Info($"=== {mod.ModId} / {variant.Name} / {version} / {stage.ToString().ToLowerInvariant()} ===");
                     if (stage == TestStage.Gui)
-                        ctx.Out.Info("Das Spiel startet mit Fenster. Der Lauf endet, wenn du es schliesst.");
+                        ctx.Out.Info(Loc.T("cli.run.guiHint"));
                 }
 
                 var run = runner.Run(mod, variant, version, stage, opts);
@@ -108,7 +109,7 @@ public static class RunCommands
         if (pending.Count > 0 && !ctx.Out.IsJson)
         {
             Console.WriteLine();
-            ctx.Out.Warn($"{pending.Count} Lauf/Laeufe warten auf die Sichtpruefung:");
+            ctx.Out.Warn(Loc.T("cli.run.pendingVisual", pending.Count));
             foreach (var p in pending)
                 ctx.Out.Info($"  tb verify --run {p.Id} --visual ok      ({p.VisualQuestion})");
         }
@@ -136,17 +137,18 @@ public static class RunCommands
             VisualText(r),
             r.Id,
         }).ToList();
-        ctx.Out.Table(rows, "Wann", "Mod", "Variante", "Version", "Stufe", "Status", "Sicht", "runId");
+        ctx.Out.Table(rows, Loc.T("col.when"), Loc.T("col.mod"), Loc.T("col.variant"), Loc.T("col.version"),
+            Loc.T("col.stage"), Loc.T("col.status"), Loc.T("col.visual"), "runId");
 
         var holder = RunLock.CurrentHolder(ctx.Machine.StateRoot);
         if (holder is not null)
-            ctx.Out.Warn($"Aktiv: {holder.Owner} macht '{holder.What}' seit {holder.Since:HH:mm} (PID {holder.Pid}).");
+            ctx.Out.Warn(Loc.T("cli.status.active", holder.Owner, holder.What, holder.Since.ToString("HH:mm"), holder.Pid));
 
         var pending = store.PendingVisual();
         if (pending.Count > 0 && !ctx.Args.Flag("pending"))
-            ctx.Out.Warn($"{pending.Count} Sichtpruefung(en) offen. tb status --pending");
+            ctx.Out.Warn(Loc.T("cli.status.pendingHint", pending.Count));
 
-        if (rows.Count == 0) ctx.Out.Info("Noch kein Lauf gespeichert.");
+        if (rows.Count == 0) ctx.Out.Info(Loc.T("cli.status.noRuns"));
 
         return ctx.Out.Finish("status", ExitCodes.Ok, new
         {
@@ -165,22 +167,22 @@ public static class RunCommands
     {
         var runId = ctx.Args.Require("run");
         var store = ctx.Store;
-        var run = store.Load(runId) ?? throw new ConfigException($"Kein Lauf '{runId}'. tb status");
+        var run = store.Load(runId) ?? throw new ConfigException(Loc.T("cli.noSuchRun", runId));
 
         var visual = (ctx.Args.Get("visual") ?? "").ToLowerInvariant();
         var state = visual switch
         {
             "ok" or "ja" or "j" or "yes" or "true" or "pass" => VisualState.Ok,
             "fail" or "nein" or "n" or "no" or "false" => VisualState.Failed,
-            "" => throw new UsageException("--visual ok|fail fehlt."),
-            _ => throw new UsageException($"--visual '{visual}' kenne ich nicht. ok oder fail."),
+            "" => throw new UsageException(Loc.T("cli.verify.visualMissing")),
+            _ => throw new UsageException(Loc.T("cli.verify.visualUnknown", visual)),
         };
 
         if (run.Stage != TestStage.Gui)
         {
             // Headless executes nothing graphical and touches no menu or key, so
             // there is nothing an eye could have confirmed.
-            ctx.Out.Bad($"Lauf '{runId}' ist ein Headless-Lauf. Eine Sichtpruefung gibt es nur fuer GUI-Laeufe.");
+            ctx.Out.Bad(Loc.T("cli.verify.headlessHasNoVisual", runId));
             return ctx.Out.Finish("verify", ExitCodes.SetupError, new { runId, stage = run.Stage.ToString().ToLowerInvariant() });
         }
 
@@ -189,10 +191,11 @@ public static class RunCommands
         if (ctx.Args.Get("note") is { } note) run.VisualNote = note;
         store.Save(run);
 
-        ctx.Out.Good($"{runId}: Sichtpruefung = {(state == VisualState.Ok ? "bestanden" : "nicht bestanden")}");
+        ctx.Out.Good(Loc.T("cli.verify.recorded", runId,
+            Loc.T(state == VisualState.Ok ? "visual.passed" : "visual.failed")));
         if (state == VisualState.Ok && run.EvidenceOk == false)
-            ctx.Out.Warn($"Achtung: {run.EvidenceLabel ?? "Der Lognachweis"} fehlt trotzdem " +
-                         $"({string.Join(", ", run.MissingEvidence)}). Der Lauf zaehlt nicht als vollstaendig bestanden.");
+            ctx.Out.Warn(Loc.T("cli.verify.evidenceStillMissing",
+                run.EvidenceLabel ?? Loc.T("report.evidenceFallback"), string.Join(", ", run.MissingEvidence)));
 
         return ctx.Out.Finish("verify", ExitCodes.Ok, new { runId, visual = state.ToString().ToLowerInvariant(), run = Describe(run) });
     }
@@ -201,7 +204,8 @@ public static class RunCommands
     {
         var (mod, _) = ctx.RequireMod();
         var variant = mod.FindVariant(ctx.Args.Get("variant"))
-                      ?? throw new ConfigException($"Mod '{mod.ModId}' hat keine Variante '{ctx.Args.Get("variant")}'.");
+                      ?? throw new ConfigException(Loc.T("cli.run.noSuchVariant", mod.ModId,
+                          ctx.Args.Get("variant") ?? "", string.Join(", ", mod.Variants.Select(v => v.Name))));
 
         // The current mod version comes from the source, not from a run: a release
         // that has not been tested yet must show up as untested, not inherit the
@@ -221,11 +225,11 @@ public static class RunCommands
         {
             r.VersionId,
             r.Headless?.GameVersion ?? "",
-            r.Headless?.StatusText ?? "UNGETESTET",
+            r.Headless?.StatusText ?? RunStatusText.Of(RunStatus.Untested),
             r.Headless is null ? "" : $"{r.Headless.Analysis.Errors}/{r.Headless.Analysis.Exceptions}/{r.Headless.Analysis.XmlProblems}",
-            r.GuiOk ? "OK" : r.GuiNote,
+            r.GuiOk ? RunStatusText.Of(RunStatus.Ok) : r.GuiNote,
         }).ToList();
-        ctx.Out.Table(rows, "Version", "Gemeldet", "Headless", "ERR/EXC/XML", "GUI");
+        ctx.Out.Table(rows, Loc.T("col.version"), Loc.T("col.reported"), Loc.T("col.headless"), "ERR/EXC/XML", "GUI");
 
         if (!ctx.Out.IsJson) Console.WriteLine();
         if (report.TestedVersions.Length > 0)
@@ -234,16 +238,16 @@ public static class RunCommands
         }
         else
         {
-            ctx.Out.Warn("Keine Version hat BEIDE Stufen bestanden - nichts als kompatibel melden.");
+            ctx.Out.Warn(Loc.T("cli.report.nothingPassed"));
             foreach (var r in report.PartialOnly)
-                ctx.Out.Info($"  {r.VersionId}: nur Stufe 1 ({r.GuiNote})");
+                ctx.Out.Info("  " + Loc.T("cli.report.stage1Only", r.VersionId, r.GuiNote));
         }
 
         string? written = null;
         if (ctx.Args.Flag("write"))
         {
             written = ReportBuilder.Write(report, ctx.Machine);
-            ctx.Out.Info($"Report: {written}");
+            ctx.Out.Info(Loc.T("cli.report.written", written));
         }
 
         return ctx.Out.Finish("report", ExitCodes.Ok, new
@@ -256,7 +260,7 @@ public static class RunCommands
             rows = report.Rows.Select(r => new
             {
                 version = r.VersionId,
-                headlessStatus = r.Headless?.StatusText ?? "UNGETESTET",
+                headlessStatus = r.Headless?.StatusText ?? RunStatusText.Of(RunStatus.Untested),
                 headlessRunId = r.Headless?.Id,
                 gameVersion = r.Headless?.GameVersion,
                 guiOk = r.GuiOk,
@@ -278,7 +282,7 @@ public static class RunCommands
 
         if (!File.Exists(run.LogPath))
         {
-            ctx.Out.Bad($"Logfile fehlt: {run.LogPath}");
+            ctx.Out.Bad(Loc.T("cli.log.missing", run.LogPath));
             return ctx.Out.Finish("log", ExitCodes.SetupError, new { runId, logPath = run.LogPath });
         }
 
@@ -299,7 +303,7 @@ public static class RunCommands
         }
 
         foreach (var l in selected) ctx.Out.Info(l);
-        if (selected.Count == 0) ctx.Out.Good("Keine auffaelligen Zeilen.");
+        if (selected.Count == 0) ctx.Out.Good(Loc.T("cli.log.nothingNotable"));
 
         return ctx.Out.Finish("log", ExitCodes.Ok, new
         {
@@ -317,36 +321,38 @@ public static class RunCommands
         if (ctx.Out.IsJson) return;
 
         var a = run.Analysis;
-        var line = $"{run.StatusText}  (Abbruch: {run.StopReason ?? "-"})";
+        var line = $"{run.StatusText}  ({Loc.T("cli.run.stopReason", run.StopReason ?? "-")})";
         if (run.Status == RunStatus.Ok) ctx.Out.Good(line); else ctx.Out.Bad(line);
 
-        if (run.Note is not null) ctx.Out.Info($"  Notiz: {run.Note}");
+        if (run.Note is not null) ctx.Out.Info("  " + Loc.T("cli.run.note", run.Note));
         if (run.Status is RunStatus.Missing or RunStatus.SetupError) return;
 
-        ctx.Out.Info($"  Spielversion: {(a.GameVersion.Length > 0 ? a.GameVersion : "unbekannt")}");
-        ctx.Out.Info($"  Mod: {run.ModName} {run.ModVersion} - {(a.ModLoaded ? "geladen" : "NICHT GELADEN")}, " +
-                     $"Harmony {(a.HarmonyApplied ? "ja" : "nein")}");
-        ctx.Out.Info($"  ERR {a.Errors}  EXC {a.Exceptions}  XML {a.XmlProblems}  ignoriert {a.Ignored} von {a.TotalLines} Zeilen");
+        ctx.Out.Info("  " + Loc.T("cli.run.gameVersion", a.GameVersion.Length > 0 ? a.GameVersion : Loc.T("cli.unknown")));
+        ctx.Out.Info("  " + Loc.T("cli.run.modLine", run.ModName, run.ModVersion,
+            Loc.T(a.ModLoaded ? "cli.run.loaded" : "cli.run.notLoaded"),
+            Loc.T(a.HarmonyApplied ? "report.yes" : "report.no")));
+        ctx.Out.Info("  " + Loc.T("cli.run.counters", a.Errors, a.Exceptions, a.XmlProblems, a.Ignored, a.TotalLines));
 
         foreach (var d in run.Dependencies)
         {
-            var text = $"  Abhaengigkeit {d.Folder} ({d.ReportedName ?? "?"}): " +
-                       (d.Problem is null ? "geladen" : d.Problem);
+            var text = "  " + Loc.T("cli.run.dependency", d.Folder, d.ReportedName ?? "?",
+                d.Problem ?? Loc.T("cli.run.loaded"));
             if (d.Problem is null) ctx.Out.Detail(text); else ctx.Out.Bad(text);
         }
 
         if (run.Stage == TestStage.Gui)
         {
             if (run.EvidenceOk is null)
-                ctx.Out.Warn($"  {run.EvidenceLabel}: kein Logmuster konfiguriert - nur Sichtpruefung");
+                ctx.Out.Warn("  " + Loc.T("cli.run.evidenceNoPattern", run.EvidenceLabel ?? Loc.T("report.evidenceFallback")));
             else if (run.EvidenceOk == true)
-                ctx.Out.Good($"  {run.EvidenceLabel}: JA");
+                ctx.Out.Good("  " + Loc.T("cli.run.evidenceYes", run.EvidenceLabel ?? Loc.T("report.evidenceFallback")));
             else
-                ctx.Out.Bad($"  {run.EvidenceLabel}: NEIN (fehlt: {string.Join(", ", run.MissingEvidence)})");
+                ctx.Out.Bad("  " + Loc.T("cli.run.evidenceNo", run.EvidenceLabel ?? Loc.T("report.evidenceFallback"),
+                    string.Join(", ", run.MissingEvidence)));
         }
 
         foreach (var h in a.Highlights.Take(10)) ctx.Out.Detail("  | " + h);
-        ctx.Out.Detail($"  Log: {run.LogPath}");
+        ctx.Out.Detail($"  {Loc.T("col.log")}: {run.LogPath}");
         ctx.Out.Detail($"  runId: {run.Id}");
     }
 
@@ -387,9 +393,9 @@ public static class RunCommands
 
     private static string VisualText(RunRecord r) => r.Visual switch
     {
-        VisualState.Ok => "ok",
-        VisualState.Failed => "FAIL",
-        VisualState.Pending => "offen",
+        VisualState.Ok => Loc.T("visual.short.ok"),
+        VisualState.Failed => Loc.T("visual.short.failed"),
+        VisualState.Pending => Loc.T("visual.short.pending"),
         _ => "-",
     };
 
@@ -402,7 +408,7 @@ public static class RunCommands
             {
                 "headless" or "smoke" or "1" or "stage1" => TestStage.Headless,
                 "gui" or "2" or "stage2" => TestStage.Gui,
-                _ => throw new UsageException($"--stage '{s}' kenne ich nicht. headless oder gui."),
+                _ => throw new UsageException(Loc.T("cli.stageUnknown", s)),
             });
         }
         return stages.Distinct().ToList();
@@ -422,7 +428,7 @@ public static class RunCommands
             "ask" or "frag" => VisualMode.Ask,
             "defer" or "offen" or "later" => VisualMode.Defer,
             "ok" or "assume-ok" or "confirm" => VisualMode.AssumeOk,
-            _ => throw new UsageException($"--visual '{raw}' kenne ich nicht. ask, defer oder ok."),
+            _ => throw new UsageException(Loc.T("cli.visualModeUnknown", raw)),
         };
     }
 }

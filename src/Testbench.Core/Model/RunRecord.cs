@@ -49,23 +49,27 @@ public enum VisualState
 public static class RunStatusText
 {
     /// <summary>
-    /// German labels, identical to the strings the PowerShell scripts printed,
-    /// so old reports and new ones can be compared without translating.
+    /// The label in the current language. The German catalog holds exactly the
+    /// strings the PowerShell scripts printed, so old and new reports can be
+    /// compared without translating anything.
     /// </summary>
-    public static string De(RunStatus s) => s switch
+    public static string Of(RunStatus s) => I18n.Loc.T(Key(s));
+
+    /// <summary>Catalog key for a status, e.g. "status.modNotLoaded".</summary>
+    public static string Key(RunStatus s) => s switch
     {
-        RunStatus.Ok => "OK",
-        RunStatus.Fatal => "FATAL",
-        RunStatus.ModNotLoaded => "MOD NICHT GELADEN",
-        RunStatus.DependencyMissing => "ABHAENGIGKEIT FEHLT",
-        RunStatus.HarmonyMissing => "HARMONY FEHLT",
-        RunStatus.Exceptions => "EXCEPTIONS",
-        RunStatus.Errors => "ERRORS",
-        RunStatus.XmlWarnings => "XML-WARNUNGEN",
-        RunStatus.Timeout => "TIMEOUT",
-        RunStatus.Missing => "FEHLT",
-        RunStatus.SetupError => "FEHLER",
-        _ => "UNGETESTET",
+        RunStatus.Ok => "status.ok",
+        RunStatus.Fatal => "status.fatal",
+        RunStatus.ModNotLoaded => "status.modNotLoaded",
+        RunStatus.DependencyMissing => "status.dependencyMissing",
+        RunStatus.HarmonyMissing => "status.harmonyMissing",
+        RunStatus.Exceptions => "status.exceptions",
+        RunStatus.Errors => "status.errors",
+        RunStatus.XmlWarnings => "status.xmlWarnings",
+        RunStatus.Timeout => "status.timeout",
+        RunStatus.Missing => "status.missing",
+        RunStatus.SetupError => "status.setupError",
+        _ => "status.untested",
     };
 
     /// <summary>A status that means "this version is fine as far as this stage can tell".</summary>
@@ -120,8 +124,8 @@ public sealed class RunRecord
 
     public RunStatus Status { get; set; } = RunStatus.Untested;
 
-    /// <summary>German status label, so a stored record is readable without the enum.</summary>
-    public string StatusText => RunStatusText.De(Status);
+    /// <summary>Status label in words, so a stored record is readable without the enum.</summary>
+    public string StatusText => RunStatusText.Of(Status);
 
     /// <summary>Why the wait ended: ready, fatal, exited, timeout.</summary>
     public string? StopReason { get; set; }

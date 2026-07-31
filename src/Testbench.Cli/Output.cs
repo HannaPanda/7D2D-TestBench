@@ -54,6 +54,9 @@ public sealed class Output
         WriteColored(message, ConsoleColor.Green);
     }
 
+    // The prefixes in JSON mode stay English on purpose: they are read by
+    // programs, not people, and a caller filtering for "WARN:" must not depend on
+    // which language happens to be configured.
     public void Warn(string message)
     {
         if (_json) { _progress.Add("WARN: " + message); return; }
@@ -62,7 +65,7 @@ public sealed class Output
 
     public void Bad(string message)
     {
-        if (_json) { _progress.Add("FEHLER: " + message); return; }
+        if (_json) { _progress.Add("ERROR: " + message); return; }
         WriteColored(message, ConsoleColor.Red);
     }
 

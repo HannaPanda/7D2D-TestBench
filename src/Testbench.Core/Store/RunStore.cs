@@ -130,7 +130,7 @@ public sealed class RunStore
                 Visual = visual ? VisualState.Ok : VisualState.Failed,
                 VisualAt = started,
                 VisualNote = Str(e, "Note"),
-                Note = "Aus gui-verified.json uebernommen; Zaehler des Laufs liegen nicht vor.",
+                Note = I18n.Loc.T("store.importedNote"),
             };
 
             Save(run);

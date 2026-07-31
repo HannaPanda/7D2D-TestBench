@@ -14,21 +14,28 @@ namespace Testbench.Core.Config;
 /// </summary>
 public sealed class MachineConfig
 {
+    /// <summary>
+    /// Language of every message the tool prints, by the names 7DTD itself uses
+    /// ("english", "german", "schinese"). "auto" follows the system language and
+    /// falls back to English.
+    /// </summary>
+    public string Language { get; set; } = "auto";
+
     /// <summary>Isolated installations live under &lt;GameRoot&gt;\7DTD-&lt;version&gt;.</summary>
-    public string GameRoot { get; set; } = @"E:\Games";
+    public string GameRoot { get; set; } = "";
 
     /// <summary>
     /// Per-version user data: &lt;UserDataRoot&gt;\&lt;version&gt; for headless runs,
     /// &lt;UserDataRoot&gt;\&lt;version&gt;-gui for GUI runs. Kept between runs so the
     /// Navezgane world does not have to be regenerated every time.
     /// </summary>
-    public string UserDataRoot { get; set; } = @"E:\Games\_TestUserData";
+    public string UserDataRoot { get; set; } = "";
 
     /// <summary>Logs and markdown reports.</summary>
-    public string ResultRoot { get; set; } = @"E:\7DTD-Testbench\results";
+    public string ResultRoot { get; set; } = "";
 
     /// <summary>Run records, the lock file and the tool's own state.</summary>
-    public string StateRoot { get; set; } = @"E:\7DTD-Testbench\state";
+    public string StateRoot { get; set; } = "";
 
     public PrefsConfig Prefs { get; set; } = new();
 
@@ -95,6 +102,24 @@ public sealed class MachineConfig
         @"\[Discord\]",
         "Retrieving remote news file",
     };
+
+    /// <summary>
+    /// A configuration whose paths all sit under one folder. This is what
+    /// "tb init" writes, and it is deliberately relative to where the tool was
+    /// unpacked: nothing here may assume a particular drive letter or user name.
+    /// </summary>
+    public static MachineConfig ForBenchRoot(string benchRoot, string? gameRoot = null)
+    {
+        benchRoot = System.IO.Path.GetFullPath(benchRoot);
+        return new MachineConfig
+        {
+            GameRoot = gameRoot is null ? System.IO.Path.Combine(benchRoot, "Games") : System.IO.Path.GetFullPath(gameRoot),
+            UserDataRoot = System.IO.Path.Combine(benchRoot, "UserData"),
+            ResultRoot = System.IO.Path.Combine(benchRoot, "results"),
+            StateRoot = System.IO.Path.Combine(benchRoot, "state"),
+            Prefs = new PrefsConfig { BackupDir = System.IO.Path.Combine(benchRoot, "prefs-backup") },
+        };
+    }
 
     /// <summary>Absolute path of the installation folder for a version id.</summary>
     public string GameDir(string versionId)
@@ -173,24 +198,22 @@ public sealed class PrefsConfig
     /// </summary>
     public string Key { get; set; } = @"HKCU\Software\The Fun Pimps\7 Days To Die";
 
-    public string BackupDir { get; set; } = @"E:\Backup\7DTD-Prefs";
+    public string BackupDir { get; set; } = "";
 
-    /// <summary>Reference export of the tuned values, for comparison and manual repair.</summary>
-    public string? GoldenReg { get; set; } = @"E:\Backup\7DTD-Prefs\prefs_golden.reg";
+    /// <summary>Reference export of your own settings, for comparison and manual repair.</summary>
+    public string? GoldenReg { get; set; }
 
     /// <summary>
-    /// Values checked after the restore. The PowerShell scripts restored the
-    /// backup and trusted it; these are the four settings that actually fixed
-    /// the RAM thrashing, so a failed restore has to be loud.
+    /// Optional: single settings to check by name after the restore, for anyone
+    /// who has tuned something they refuse to lose.
+    ///
+    /// Empty by default, and that costs nothing: every restore is verified
+    /// generically by exporting the key again and comparing it against the
+    /// backup, see <see cref="Prefs.PrefsGuard.RoundTrip"/>. These entries only
+    /// add "and this particular value must read exactly this".
     ///
     /// Unity mangles PlayerPrefs value names into "&lt;name&gt;_h&lt;hash&gt;", which is
-    /// why these are matched as a prefix, not compared literally.
+    /// why they are matched as a prefix, not compared literally.
     /// </summary>
-    public Dictionary<string, int> GoldenValues { get; set; } = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["DynamicMeshDistance"] = 1000,
-        ["DynamicMeshUseImposters"] = 1,
-        ["OptionsGfxTexQuality"] = 1,
-        ["OptionsGfxViewDistance"] = 5,
-    };
+    public Dictionary<string, int> GoldenValues { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

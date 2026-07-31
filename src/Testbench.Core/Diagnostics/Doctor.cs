@@ -1,4 +1,5 @@
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 using Testbench.Core.Prefs;
 using Testbench.Core.Run;
 using Testbench.Core.Store;
@@ -23,7 +24,7 @@ public static class Doctor
     {
         var checks = new List<Check>();
 
-        checks.Add(new Check("config", CheckLevel.Ok, $"Maschinenkonfiguration: {machinePath}"));
+        checks.Add(new Check("config", CheckLevel.Ok, Loc.T("doctor.configAt", machinePath)));
 
         // ---- paths --------------------------------------------------------
         CheckDir(checks, "gameRoot", machine.GameRoot, required: true);
@@ -36,70 +37,82 @@ public static class Doctor
         // ---- versions -----------------------------------------------------
         if (machine.Versions.Count == 0)
         {
-            checks.Add(new Check("versions", CheckLevel.Fail, "Keine Version eingetragen.",
-                "tb versions scan --add"));
+            checks.Add(new Check("versions", CheckLevel.Fail, Loc.T("doctor.noVersions"),
+                Loc.T("doctor.fix.scanAdd")));
         }
         foreach (var v in machine.Versions)
         {
             var dir = machine.GameDir(v.Id);
             var exe = Path.Combine(dir, VersionScanner.ExeName);
+            var area = $"version {v.Id}";
+
             if (File.Exists(exe))
             {
+                // The one that would cost somebody their modlist rather than a test
+                // run: a version entry pointing at the copy they play.
+                if (SteamLocator.IsLiveInstall(dir))
+                {
+                    checks.Add(new Check(area, CheckLevel.Fail, Loc.T("doctor.version.isLive", dir),
+                        Loc.T("doctor.fix.isLive")));
+                    continue;
+                }
+
                 var harmony = Directory.Exists(Path.Combine(dir, "Mods", "0_TFP_Harmony"));
                 checks.Add(harmony
-                    ? new Check($"version {v.Id}", CheckLevel.Ok, dir)
-                    : new Check($"version {v.Id}", CheckLevel.Warn,
-                        $"{dir}: kein Mods\\0_TFP_Harmony - DLL-Mods laden dort nicht.",
-                        "Installation pruefen oder 0_TFP_Harmony nachlegen."));
+                    ? new Check(area, CheckLevel.Ok, dir)
+                    : new Check(area, CheckLevel.Warn, Loc.T("doctor.version.noHarmony", dir),
+                        Loc.T("doctor.fix.harmony")));
 
-                CheckIdentity(checks, machine, store, v, dir);
+                CheckIdentity(checks, store, v, dir);
             }
             else
             {
-                checks.Add(new Check($"version {v.Id}", CheckLevel.Fail, $"Keine 7DaysToDie.exe unter {dir}",
+                checks.Add(new Check(area, CheckLevel.Fail, Loc.T("doctor.version.noExe", dir),
                     v.Branch is null
-                        ? "Installation besorgen (DepotDownloader) oder Version entfernen."
-                        : $"DepotDownloader -app 251570 -depot 251576 -branch {v.Branch} -dir \"{dir}\""));
+                        ? Loc.T("doctor.fix.getInstall")
+                        : Loc.T("doctor.fix.depot", v.Branch, dir)));
             }
         }
 
         // ---- dependency library -------------------------------------------
         foreach (var (key, dep) in machine.DependencyLibrary)
         {
+            var area = $"dep {key}";
             if (string.IsNullOrWhiteSpace(dep.Source))
-                checks.Add(new Check($"dep {key}", CheckLevel.Warn, "Keine Quelle eingetragen."));
+                checks.Add(new Check(area, CheckLevel.Warn, Loc.T("doctor.dep.noSource")));
             else if (!Directory.Exists(dep.Source))
-                checks.Add(new Check($"dep {key}", CheckLevel.Fail, $"Quelle fehlt: {dep.Source}",
-                    "Pfad in dependencyLibrary korrigieren; sonst laeuft jeder Test ohne diese Abhaengigkeit."));
+                checks.Add(new Check(area, CheckLevel.Fail, Loc.T("doctor.dep.sourceMissing", dep.Source),
+                    Loc.T("doctor.fix.depSource")));
             else
-                checks.Add(new Check($"dep {key}", CheckLevel.Ok, $"{dep.Folder} <- {dep.Source}"));
+                checks.Add(new Check(area, CheckLevel.Ok, $"{dep.Folder} <- {dep.Source}"));
         }
 
         // ---- registered mods ----------------------------------------------
         var mods = ConfigStore.LoadRegisteredMods(machine, out var missingMods);
         foreach (var m in missingMods)
-            checks.Add(new Check("mods", CheckLevel.Warn, $"Registrierte Mod-Konfiguration fehlt: {m}",
-                "tb mods remove <pfad>"));
+            checks.Add(new Check("mods", CheckLevel.Warn, Loc.T("doctor.mods.configMissing", m),
+                Loc.T("doctor.fix.modsRemove")));
 
         foreach (var (mod, path) in mods)
         {
+            var area = $"mod {mod.ModId}";
             foreach (var variant in mod.Variants)
             {
                 var src = mod.VariantSource(variant);
                 checks.Add(Directory.Exists(src)
-                    ? new Check($"mod {mod.ModId}", CheckLevel.Ok, $"{variant.Name} <- {src}")
-                    : new Check($"mod {mod.ModId}", CheckLevel.Fail, $"Variante '{variant.Name}': Quelle fehlt: {src}",
-                        $"Pfad in {path} korrigieren."));
+                    ? new Check(area, CheckLevel.Ok, $"{variant.Name} <- {src}")
+                    : new Check(area, CheckLevel.Fail,
+                        Loc.T("doctor.mod.variantSourceMissing", variant.Name, src),
+                        Loc.T("doctor.fix.fixPathIn", path)));
             }
 
             foreach (var key in mod.Dependencies.Where(k => !machine.DependencyLibrary.ContainsKey(k)))
-                checks.Add(new Check($"mod {mod.ModId}", CheckLevel.Fail,
-                    $"Abhaengigkeit '{key}' steht nicht in dependencyLibrary.", $"In {machinePath} ergaenzen."));
+                checks.Add(new Check(area, CheckLevel.Fail,
+                    Loc.T("doctor.mod.unknownDependency", key), Loc.T("doctor.fix.addToLibrary", machinePath)));
 
             foreach (var p in mod.Stage2?.EvidencePatterns ?? new List<string>())
                 if (!LogAnalyzer.IsValidRegex(p))
-                    checks.Add(new Check($"mod {mod.ModId}", CheckLevel.Fail,
-                        $"evidencePattern ist kein gueltiger regulaerer Ausdruck: {p}"));
+                    checks.Add(new Check(area, CheckLevel.Fail, Loc.T("doctor.mod.badEvidenceRegex", p)));
         }
 
         // ---- patterns in the machine config --------------------------------
@@ -111,30 +124,28 @@ public static class Doctor
                  })
         {
             if (!LogAnalyzer.IsValidRegex(pattern))
-                checks.Add(new Check("patterns", CheckLevel.Fail, $"{name} ist kein gueltiger regulaerer Ausdruck."));
+                checks.Add(new Check("patterns", CheckLevel.Fail, Loc.T("doctor.pattern.badRegex", name)));
         }
 
         // The one that cost a whole test run: waiting for a marker that appears
         // seconds into startup reports green having tested nothing.
         if (machine.ReadyPattern.Contains("Telnet", StringComparison.OrdinalIgnoreCase))
-            checks.Add(new Check("patterns", CheckLevel.Fail,
-                "readyPattern wartet auf Telnet. Das kommt nach ~3 s, lange vor dem XML-Laden - jeder Lauf waere falsch gruen.",
-                "readyPattern auf 'INF StartGame done' zuruecksetzen."));
+            checks.Add(new Check("patterns", CheckLevel.Fail, Loc.T("doctor.pattern.telnet"),
+                Loc.T("doctor.fix.telnet")));
 
         // ---- environment ---------------------------------------------------
         var running = GameLauncher.RunningInstances();
         if (running.Length > 0)
         {
             checks.Add(new Check("environment", CheckLevel.Fail,
-                $"7DaysToDie laeuft (PID {running[0].Id}) - kein Lauf moeglich, und die Mod-DLLs sind gesperrt.",
-                "Spiel beenden."));
+                Loc.T("doctor.env.gameRunning", running[0].Id), Loc.T("doctor.fix.closeGame")));
         }
         foreach (var p in running) p.Dispose();
 
         var holder = RunLock.CurrentHolder(machine.StateRoot);
         if (holder is not null)
             checks.Add(new Check("environment", CheckLevel.Warn,
-                $"Ein Lauf ist aktiv: {holder.Owner} macht '{holder.What}' seit {holder.Since:HH:mm} (PID {holder.Pid})."));
+                Loc.T("doctor.env.runActive", holder.Owner, holder.What, holder.Since.ToString("HH:mm"), holder.Pid)));
 
         // ---- prefs ---------------------------------------------------------
         var prefsChecks = new PrefsGuard(machine.Prefs).Verify();
@@ -143,17 +154,18 @@ public static class Doctor
             checks.Add(c.Ok
                 ? new Check("prefs", CheckLevel.Ok, $"{c.Name} = {c.Actual}")
                 : new Check("prefs", CheckLevel.Warn,
-                    $"{c.Name} ist {c.Actual?.ToString() ?? "nicht lesbar"}, erwartet {c.Expected}. {c.Problem}",
-                    machine.Prefs.GoldenReg is { } g ? $"reg import \"{g}\"" : null));
+                    Loc.T("doctor.prefs.valueOff", c.Name, c.Actual?.ToString() ?? Loc.T("prefs.unreadable"),
+                        c.Expected, c.Problem ?? ""),
+                    machine.Prefs.GoldenReg is { } g ? Loc.T("doctor.fix.regImport", g) : null));
         }
 
         // ---- pending human work --------------------------------------------
         var pending = store.PendingVisual();
         if (pending.Count > 0)
             checks.Add(new Check("stage2", CheckLevel.Warn,
-                $"{pending.Count} GUI-Lauf/-Laeufe warten auf die Sichtpruefung: " +
-                string.Join(", ", pending.Select(p => $"{p.ModId} {p.VersionId}")),
-                "tb verify --run <id> --visual ok|fail"));
+                Loc.T("doctor.stage2.pending", pending.Count,
+                    string.Join(", ", pending.Select(p => $"{p.ModId} {p.VersionId}"))),
+                Loc.T("doctor.fix.verify")));
 
         return checks;
     }
@@ -165,23 +177,21 @@ public static class Doctor
     /// When they disagree, every report about that version is wrong, and nothing
     /// in a log would ever say so.
     /// </summary>
-    private static void CheckIdentity(List<Check> checks, MachineConfig machine, RunStore store,
-        GameVersion v, string dir)
+    private static void CheckIdentity(List<Check> checks, RunStore store, GameVersion v, string dir)
     {
         var area = $"version {v.Id}";
         var build = VersionScanner.ReadBuild(dir);
 
         if (v.Build is not null && build is not null && v.Build != build)
             checks.Add(new Check(area, CheckLevel.Warn,
-                $"Installation hat sich geaendert: eingetragen war Build {v.Build}, dort liegt {build}. " +
-                "Vermutlich hat Steam den Ordner aktualisiert.",
-                "Ergebnisse fuer diese Version noch einmal fahren; Build mit 'tb versions remove/add --path' neu eintragen."));
+                Loc.T("doctor.version.buildChanged", v.Build, build),
+                Loc.T("doctor.fix.buildChanged")));
 
         var decoded = build is null ? null : VersionScanner.IdFromBuild(build);
         if (decoded is not null && !string.Equals(decoded, v.Id, StringComparison.OrdinalIgnoreCase))
             checks.Add(new Check(area, CheckLevel.Warn,
-                $"Der Ordner ist als '{v.Id}' eingetragen, die Installation meldet sich als {decoded} (Build {build}).",
-                "Eintrag korrigieren, sonst meldet der Report eine Version, die nie getestet wurde."));
+                Loc.T("doctor.version.idMismatch", v.Id, decoded, build ?? ""),
+                Loc.T("doctor.fix.idMismatch")));
 
         // What the game itself said, last time it ran. The only statement that
         // cannot be a naming mistake.
@@ -190,22 +200,24 @@ public static class Doctor
                                  && r.Analysis.GameVersionShort.Length > 0)?.Analysis.GameVersionShort;
         if (reported is not null && !string.Equals(reported, $"V {v.Id}", StringComparison.OrdinalIgnoreCase))
             checks.Add(new Check(area, CheckLevel.Warn,
-                $"Der letzte Lauf unter '{v.Id}' hat sich als '{reported}' gemeldet.",
-                "Eintrag oder Installation pruefen."));
+                Loc.T("doctor.version.reportedOther", v.Id, reported),
+                Loc.T("doctor.fix.checkEntry")));
     }
 
     private static void CheckDir(List<Check> checks, string area, string path, bool required)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
-            checks.Add(new Check(area, required ? CheckLevel.Fail : CheckLevel.Warn, "Nicht gesetzt."));
+            checks.Add(new Check(area, required ? CheckLevel.Fail : CheckLevel.Warn, Loc.T("doctor.dirNotSet"),
+                required ? Loc.T("doctor.fix.init") : null));
             return;
         }
         if (Directory.Exists(path)) { checks.Add(new Check(area, CheckLevel.Ok, path)); return; }
 
         checks.Add(required
-            ? new Check(area, CheckLevel.Fail, $"Verzeichnis fehlt: {path}")
-            : new Check(area, CheckLevel.Warn, $"Verzeichnis fehlt noch: {path}", "Wird beim ersten Lauf angelegt."));
+            ? new Check(area, CheckLevel.Fail, Loc.T("doctor.dirMissing", path))
+            : new Check(area, CheckLevel.Warn, Loc.T("doctor.dirMissingYet", path),
+                Loc.T("doctor.fix.createdOnFirstRun")));
     }
 
     public static CheckLevel Worst(IEnumerable<Check> checks) =>

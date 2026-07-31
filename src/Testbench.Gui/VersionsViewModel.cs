@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 
 namespace Testbench.Gui;
 
@@ -16,15 +17,19 @@ public sealed class CandidateRow : Notifier
         _id = candidate.ProposedId ?? "";
         // Preselected only where nothing is in doubt. A contradiction between
         // folder name and build has to be looked at, not clicked away.
-        _take = candidate is { HasExe: true, Registered: false, Mismatch: false } && _id.Length > 0;
+        _take = candidate is { Blocked: false, Registered: false, Mismatch: false } && _id.Length > 0;
     }
 
     public VersionCandidate Candidate { get; }
 
     public string Dir => Candidate.Dir;
     public string Info => Candidate.Explain();
-    public bool CanTake => Candidate is { HasExe: true, Registered: false };
-    public bool Warn => Candidate.Mismatch || Candidate.Source == IdSource.FolderName || !Candidate.HasHarmony;
+
+    /// <summary>The live Steam installation can never be picked, see <see cref="VersionCandidate.Blocked"/>.</summary>
+    public bool CanTake => Candidate is { Blocked: false, Registered: false };
+
+    public bool Warn => Candidate.Mismatch || Candidate.IsLiveInstall ||
+                        Candidate.Source == IdSource.FolderName || !Candidate.HasHarmony;
 
     public string Id
     {
@@ -50,10 +55,10 @@ public sealed class RegisteredRow
 
         var live = Installed ? VersionScanner.ReadBuild(Dir) : null;
         Info = !Installed
-            ? "keine 7DaysToDie.exe - so kann kein Lauf stattfinden"
+            ? Loc.T("gui.versions.noExe")
             : version.Build is not null && live is not null && version.Build != live
-                ? $"Build hat sich geaendert: eingetragen {version.Build}, dort liegt {live}"
-                : $"Build {live ?? version.Build ?? "unbekannt"}";
+                ? Loc.T("doctor.version.buildChanged", version.Build, live)
+                : $"Build {live ?? version.Build ?? Loc.T("cli.unknown")}";
     }
 
     public GameVersion Version { get; }
@@ -111,7 +116,7 @@ public sealed class VersionsViewModel : Notifier
         Candidates.Clear();
         if (!Directory.Exists(Root))
         {
-            Status = $"Ordner fehlt: {Root}";
+            Status = Loc.T("cli.folderMissing", Root);
             return;
         }
 
@@ -120,14 +125,14 @@ public sealed class VersionsViewModel : Notifier
 
         var neu = Candidates.Count(c => c.CanTake);
         Status = found.Count == 0
-            ? $"In {Root} keine Installation gefunden."
-            : $"{found.Count} Installation(en) in {Root}, davon {neu} nicht eingetragen.";
+            ? Loc.T("gui.versions.nothingFound", Root)
+            : Loc.T("gui.versions.foundCount", found.Count, Root, neu);
     }
 
     /// <summary>Takes a single folder the user picked, wherever it lies.</summary>
     public void AddFolder(string dir)
     {
-        if (!Directory.Exists(dir)) { Status = $"Ordner fehlt: {dir}"; return; }
+        if (!Directory.Exists(dir)) { Status = Loc.T("cli.folderMissing", dir); return; }
 
         var candidate = VersionScanner.Inspect(dir, _machine);
         if (!candidate.HasExe)
@@ -141,7 +146,7 @@ public sealed class VersionsViewModel : Notifier
                 Scan();
                 return;
             }
-            Status = $"In {dir} liegt keine {VersionScanner.ExeName}.";
+            Status = Loc.T("gui.versions.noExeIn", dir, VersionScanner.ExeName);
             return;
         }
 
@@ -149,29 +154,29 @@ public sealed class VersionsViewModel : Notifier
         if (existing is not null)
         {
             existing.Take = existing.CanTake;
-            Status = $"{candidate.Dir} war schon in der Liste.";
+            Status = Loc.T("gui.versions.alreadyListed", candidate.Dir);
             return;
         }
 
         Candidates.Insert(0, new CandidateRow(candidate));
         Status = candidate.Registered
-            ? $"{candidate.Dir} ist schon als {candidate.RegisteredAs} eingetragen."
-            : $"Erkannt: {candidate.ProposedId ?? "keine Version erkennbar"} ({candidate.Explain()})";
+            ? Loc.T("gui.versions.alreadyRegistered", candidate.Dir, candidate.RegisteredAs!)
+            : Loc.T("cli.versions.detected", candidate.ProposedId ?? Loc.T("cli.unknown"), candidate.Explain());
     }
 
     /// <summary>Writes the checked rows into the machine configuration.</summary>
     public void Apply()
     {
         var take = Candidates.Where(c => c.Take).ToList();
-        if (take.Count == 0) { Status = "Nichts ausgewaehlt."; return; }
+        if (take.Count == 0) { Status = Loc.T("gui.versions.nothingSelected"); return; }
 
         var done = new List<string>();
         foreach (var row in take)
         {
-            if (row.Id.Length == 0) { Status = $"{row.Dir}: keine Version angegeben."; return; }
+            if (row.Id.Length == 0) { Status = Loc.T("gui.versions.noIdGiven", row.Dir); return; }
             if (_machine.FindVersion(row.Id) is not null)
             {
-                Status = $"'{row.Id}' ist schon eingetragen, mit einem anderen Ordner. Erst dort entfernen.";
+                Status = Loc.T("gui.versions.idTaken", row.Id);
                 return;
             }
 
@@ -195,7 +200,7 @@ public sealed class VersionsViewModel : Notifier
         }
 
         Save();
-        Status = $"Eingetragen: {string.Join(", ", done)}.";
+        Status = Loc.T("gui.versions.registered", string.Join(", ", done));
         Scan();
     }
 
@@ -209,7 +214,7 @@ public sealed class VersionsViewModel : Notifier
         if (entry is null) return;
         _machine.Versions.Remove(entry);
         Save();
-        Status = $"'{row.Id}' entfernt. Der Ordner {row.Dir} bleibt liegen.";
+        Status = Loc.T("cli.versions.removed", row.Id, row.Dir);
         Scan();
     }
 

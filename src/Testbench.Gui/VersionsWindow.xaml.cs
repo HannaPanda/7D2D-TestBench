@@ -1,6 +1,7 @@
 using System.Windows;
 using Microsoft.Win32;
 using Testbench.Core.Config;
+using Testbench.Core.I18n;
 
 namespace Testbench.Gui;
 
@@ -30,7 +31,7 @@ public partial class VersionsWindow : Window
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Installation oder uebergeordneten Ordner waehlen",
+            Title = Loc.T("gui.versions.pickFolder"),
             InitialDirectory = System.IO.Directory.Exists(_vm.Root) ? _vm.Root : "",
         };
         if (dialog.ShowDialog(this) == true) _vm.AddFolder(dialog.FolderName);
@@ -42,9 +43,8 @@ public partial class VersionsWindow : Window
     {
         if (((FrameworkElement)sender).Tag is not RegisteredRow row) return;
 
-        var answer = MessageBox.Show(this,
-            $"Eintrag '{row.Id}' entfernen?\n\nDie Installation unter\n{row.Dir}\nbleibt unangetastet.",
-            "Version entfernen", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        var answer = MessageBox.Show(this, Loc.T("gui.versions.confirmRemove", row.Id, row.Dir),
+            Loc.T("gui.versions.removeTitle"), MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (answer == MessageBoxResult.Yes) _vm.Remove(row);
     }
 

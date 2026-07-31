@@ -70,20 +70,30 @@ public sealed class VersionCandidate
         IdFromBuild is not null && IdFromFolder is not null &&
         !string.Equals(IdFromBuild, IdFromFolder, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// True when this folder is the installation the player actually plays. Such a
+    /// folder must never become a test version: a run would sweep their mods away.
+    /// </summary>
+    public bool IsLiveInstall { get; init; }
+
+    /// <summary>Anything that makes this folder unusable as a test version.</summary>
+    public bool Blocked => !HasExe || IsLiveInstall;
+
     /// <summary>One line for a table or a list row.</summary>
     public string Explain()
     {
-        if (!HasExe) return "keine 7DaysToDie.exe";
-        if (Mismatch) return $"Ordner sagt {IdFromFolder}, Installation sagt {IdFromBuild} (Build {Build})";
+        if (!HasExe) return I18n.Loc.T("scan.noExe");
+        if (IsLiveInstall) return I18n.Loc.T("scan.isLiveInstall");
+        if (Mismatch) return I18n.Loc.T("scan.mismatch", IdFromFolder!, IdFromBuild!, Build ?? "");
 
         var basis = Source switch
         {
-            IdSource.GameConfig => $"aus MicrosoftGame.Config, Build {Build}",
-            IdSource.FolderName => "nur aus dem Ordnernamen geraten",
-            _ => "Version nicht erkennbar, Id selbst angeben",
+            IdSource.GameConfig => I18n.Loc.T("scan.fromGameConfig", Build ?? ""),
+            IdSource.FolderName => I18n.Loc.T("scan.fromFolderName"),
+            _ => I18n.Loc.T("scan.unknown"),
         };
-        if (Registered) basis = $"eingetragen als {RegisteredAs}, {basis}";
-        if (!HasHarmony) basis += "; kein 0_TFP_Harmony";
+        if (Registered) basis = I18n.Loc.T("scan.registeredAs", RegisteredAs!, basis);
+        if (!HasHarmony) basis += I18n.Loc.T("scan.noHarmony");
         return basis;
     }
 }
@@ -175,6 +185,7 @@ public static class VersionScanner
             IdFromBuild = build is null ? null : IdFromBuild(build),
             IdFromFolder = IdFromFolder(Path.GetFileName(dir.TrimEnd(Path.DirectorySeparatorChar))),
             Mods = ModFolders(dir),
+            IsLiveInstall = Diagnostics.SteamLocator.IsLiveInstall(dir),
         };
 
         if (machine is not null) candidate.RegisteredAs = RegisteredAs(machine, dir);
