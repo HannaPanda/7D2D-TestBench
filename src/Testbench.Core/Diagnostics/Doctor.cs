@@ -16,7 +16,7 @@ public sealed record Check(string Area, CheckLevel Level, string Message, string
 /// This exists because the failure modes of the PowerShell bench were all
 /// invisible from the outside: a source path that had moved, a game still
 /// running, a dependency folder that a previous run had swept into
-/// _Mods-deaktiviert, prefs left at a build's defaults.
+/// _Mods-disabled, prefs left at a build's defaults.
 /// </summary>
 public static class Doctor
 {

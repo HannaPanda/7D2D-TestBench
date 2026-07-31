@@ -1,0 +1,44 @@
+7DTD Multiversion Testbench
+===========================
+
+Before anything else: install the .NET 10 Desktop Runtime if you do not have it.
+    https://dotnet.microsoft.com/download/dotnet/10.0
+Neither of the two exes starts without it.
+
+Then, in this folder:
+
+    tb.exe init
+
+That writes testbench.json and creates the subfolders, finds the 7DTD installation
+you play and tells you that this one must not be registered here. A test run
+clears every foreign mod out of the Mods folder, and your modlist should not be
+what it clears. The tool refuses that folder by itself as well.
+
+After that, copy one game installation per version you want to test into Games\
+(or pull it with DepotDownloader), then:
+
+    tb.exe versions scan --add
+    tb.exe doctor
+
+A window instead of typing:
+
+    Testbench.Gui.exe
+
+Language: top right in the window, or "tb.exe lang german". The default is your
+system language, English if there is no catalog for it. The texts are JSON files
+in lang\ and can be improved there without rebuilding anything.
+
+Registering a mod: take examples\testbench.mod.json as the pattern, put it at
+<your-mod-repo>\test\testbench.mod.json, then
+
+    tb.exe mods add <path-to-it>
+
+Everything else: README.md, and when in doubt
+
+    tb.exe doctor
+
+License: MIT, see LICENSE. Use it, change it, pass it on, inside something of
+your own as well; all that has to stay is the copyright notice. No warranty.
+
+Documentation and issues:
+https://github.com/HannaPanda/7D2D-TestBench

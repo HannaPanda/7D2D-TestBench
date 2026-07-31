@@ -58,7 +58,7 @@ public sealed class MachineConfig
 
     /// <summary>
     /// Mods allowed to stay in a test installation. Everything else is moved to
-    /// _Mods-deaktiviert before a run so a failure provably belongs to the mod
+    /// _Mods-disabled before a run so a failure provably belongs to the mod
     /// under test. The mod itself and its dependencies are added automatically.
     /// </summary>
     public List<string> KeepMods { get; set; } = new() { "0_TFP_Harmony" };

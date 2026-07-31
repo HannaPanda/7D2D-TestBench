@@ -5,7 +5,7 @@ installation you play.
 
 **Requires the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).**
 Unpack, then run `tb.exe init` in the unpacked folder, or read
-`LIESMICH-ZUERST.txt`.
+`START-HERE.txt`.
 
 ## What it does
 
@@ -27,7 +27,7 @@ Unpack, then run `tb.exe init` in the unpacked folder, or read
 ## Careful with
 
 Your played installation. A run moves every mod it did not install into
-`_Mods-deaktiviert` so that a failure provably belongs to the mod under test.
+`_Mods-disabled` so that a failure provably belongs to the mod under test.
 Point it at your own copy and it would take your modlist apart. The tool locates
 that folder specifically in order to refuse it, both in `tb doctor` and in the run
 itself, but keep test installations separate anyway.

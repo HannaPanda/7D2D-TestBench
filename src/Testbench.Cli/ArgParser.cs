@@ -63,7 +63,7 @@ public sealed class Args
         _options.TryGetValue(name, out var v) && v.Count > 0 ? v[^1] : null;
 
     public string Require(string name) =>
-        Get(name) ?? throw new UsageException($"--{name} fehlt.");
+        Get(name) ?? throw new UsageException(Core.I18n.Loc.T("cli.optionMissing", name));
 
     /// <summary>
     /// Values of a repeatable option, also splitting on commas so

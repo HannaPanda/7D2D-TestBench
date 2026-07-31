@@ -1,26 +1,30 @@
-# legacy - der PowerShell-Bench
+# legacy - the PowerShell bench
 
-Diese vier Dateien waren der Testbench, bis am 2026-07-31 dieses Programm sie
-ersetzt hat. Sie liegen hier, weil sie die **Referenz für den Paritätsnachweis**
-sind: die Erwartungswerte in `tests/Testbench.Core.Tests/LogAnalyzerParityTests.cs`
-stammen aus diesen Zählzeilen, gemessen auf denselben Logs.
+These files were the test bench until this program replaced them on 2026-07-31. They
+are here because they are the **reference for the parity proof**: the expected values
+in `tests/Testbench.Core.Tests/LogAnalyzerParityTests.cs` come from these counting
+lines, measured on the same logs.
 
-| Datei | Was es war |
+| File | What it was |
 |---|---|
-| `Invoke-SmokeTest.ps1` | Stufe 1, ein Lauf headless. Vorlage für `TestRunner` und `LogAnalyzer` |
-| `Invoke-TestMatrix.ps1` | Schleife über alle Versionen plus Markdown-Report |
-| `Start-Gui.ps1` | Stufe 2, Lauf mit Fenster und Sichtprüfung |
-| `Testbench.psd1` | Maschinen- und Mod-Konfiguration in einer Datei |
-| `README-powershell.md` | die Doku dazu, Quelle vieler Absätze in `docs/conventions/traps.md` |
+| `Invoke-SmokeTest.ps1` | stage 1, one headless run. The template for `TestRunner` and `LogAnalyzer` |
+| `Invoke-TestMatrix.ps1` | the loop over all versions plus the markdown report |
+| `Start-Gui.ps1` | stage 2, a run with a window and a visual check |
+| `Testbench.psd1` | machine and mod configuration in one file |
+| `README-powershell.md` | their documentation, the source of many paragraphs in `docs/conventions/traps.md` |
 
-Sie werden **nicht** gepflegt und sollen nicht mehr benutzt werden. Zwei stille
-Fehler stecken noch drin und sind absichtlich nicht korrigiert, damit der
-Paritätsnachweis gegen den echten alten Stand läuft:
+They are **not** maintained and should not be used any more. Two silent bugs are still
+in there and are deliberately not fixed, so that the parity proof runs against the
+real old state:
 
-- `Invoke-TestMatrix.ps1` liest `$g.AtlasOk`, während `Start-Gui.ps1` `EvidenceOk`
-  schreibt. Deshalb wurde nie eine `TESTED_VERSIONS`-Zeile vorgeschlagen, obwohl
-  bestätigte GUI-Läufe vorlagen.
-- Der Abgleich lief nur über die Spielversion, nicht über Mod, Variante und
-  Mod-Version. Eine Bestätigung für einen Mod hätte einen anderen grün gemacht.
+- `Invoke-TestMatrix.ps1` reads `$g.AtlasOk` while `Start-Gui.ps1` writes
+  `EvidenceOk`. That is why a `TESTED_VERSIONS` line was never proposed although
+  confirmed GUI runs existed.
+- The comparison only went by the game version, not by mod, variant and mod version.
+  A confirmation for one mod would have turned another one green.
 
-Beides steht als Falle 15 in [`../docs/conventions/traps.md`](../docs/conventions/traps.md).
+Both are trap 15 in [`../docs/conventions/traps.md`](../docs/conventions/traps.md).
+
+`README-powershell.md` is kept in German, verbatim, because it is an archive of what
+the retired scripts documented at the time. Everything it is still worth reading for
+has been carried over into `docs/conventions/traps.md` in English.

@@ -16,7 +16,15 @@ public sealed record DeployResult(
 /// </summary>
 public sealed class ModDeployer
 {
-    public const string TrashFolder = "_Mods-deaktiviert";
+    public const string TrashFolder = "_Mods-disabled";
+
+    /// <summary>
+    /// What the folder was called while this tool was German-only. It is created
+    /// inside somebody else's game installation, so the name has to be readable
+    /// for everybody; <see cref="MigrateLegacyTrash"/> carries an existing one
+    /// over instead of leaving two folders behind.
+    /// </summary>
+    public const string LegacyTrashFolder = "_Mods-deaktiviert";
 
     private readonly MachineConfig _machine;
     private readonly Action<string> _log;
@@ -97,7 +105,7 @@ public sealed class ModDeployer
 
         void Add(string key, int depth)
         {
-            if (depth > 8) throw new ConfigException($"Abhaengigkeiten von '{key}' sind zirkulaer.");
+            if (depth > 8) throw new ConfigException(I18n.Loc.T("deploy.circularDependency", key));
             if (!_machine.DependencyLibrary.TryGetValue(key, out var def))
                 throw new ConfigException(I18n.Loc.T("deploy.unknownDependency", mod.ModId, key));
             foreach (var req in def.Requires) Add(req, depth + 1);
@@ -112,7 +120,7 @@ public sealed class ModDeployer
     }
 
     /// <summary>
-    /// Moves every mod that is not on the keep list into _Mods-deaktiviert.
+    /// Moves every mod that is not on the keep list into the trash folder.
     ///
     /// Two traps live in here. Move-Item -Force does NOT overwrite an existing
     /// directory, it fails on it, and with -ErrorAction SilentlyContinue it failed
@@ -125,6 +133,7 @@ public sealed class ModDeployer
     {
         var trash = Path.Combine(gameDir, TrashFolder);
         Directory.CreateDirectory(trash);
+        MigrateLegacyTrash(gameDir, trash);
 
         var disabled = new List<string>();
         foreach (var dir in Directory.GetDirectories(modsDir))
@@ -140,9 +149,43 @@ public sealed class ModDeployer
                 throw new IOException(I18n.Loc.T("deploy.cannotRemove", name));
 
             disabled.Add(name);
-            _log($"Deaktiviert: {name}");
+            _log($"Disabled: {name}");
         }
         return disabled;
+    }
+
+    /// <summary>
+    /// Carries a trash folder from the German-only days over to the current name,
+    /// so an installation does not end up with two of them and a later look does
+    /// not have to guess which one is the current one.
+    ///
+    /// Deliberately destroys nothing: where both folders hold the same mod, the
+    /// newer copy stays and the old one is left where it is. This is somebody's
+    /// mod collection, and a rename is not a reason to lose a folder.
+    /// </summary>
+    private void MigrateLegacyTrash(string gameDir, string trash)
+    {
+        var legacy = Path.Combine(gameDir, LegacyTrashFolder);
+        if (!Directory.Exists(legacy) ||
+            string.Equals(legacy, trash, StringComparison.OrdinalIgnoreCase)) return;
+
+        var moved = 0;
+        foreach (var entry in Directory.GetFileSystemEntries(legacy))
+        {
+            var to = Path.Combine(trash, Path.GetFileName(entry));
+            if (Directory.Exists(to) || File.Exists(to)) continue;
+
+            if (Directory.Exists(entry)) Directory.Move(entry, to);
+            else File.Move(entry, to);
+            moved++;
+        }
+
+        var left = Directory.GetFileSystemEntries(legacy).Length;
+        if (left == 0) Directory.Delete(legacy);
+
+        if (moved > 0 || left > 0)
+            _log($"{LegacyTrashFolder} -> {TrashFolder}: {moved} moved" +
+                 (left > 0 ? $", {left} left behind because the name already existed" : ""));
     }
 }
 

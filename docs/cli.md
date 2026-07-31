@@ -1,57 +1,55 @@
-# tb - Kommandozeile
+# tb - the command line
 
-`tb.exe` und `testbench.json` liegen im selben Ordner. Gesucht wird die
-Konfiguration neben der Exe und eine Ebene darüber, damit auch die Aufteilung
-`<bench>\bin\tb.exe` neben `<bench>\testbench.json` funktioniert.
+`tb.exe` and `testbench.json` live in the same folder. The configuration is looked
+for next to the exe and one level above it, so the layout
+`<bench>\bin\tb.exe` next to `<bench>\testbench.json` works as well.
 
-## Exit-Codes
+## Exit codes
 
-Teil des Kontrakts. Ein Agent entscheidet daran, was als nächstes passiert.
+Part of the contract. An agent decides what happens next from them.
 
-| Code | Bedeutung |
+| Code | Meaning |
 |---|---|
-| 0 | in Ordnung |
-| 1 | Test durchgefallen (das Werkzeug hat funktioniert) |
-| 2 | Konfigurations- oder Umgebungsfehler, es wurde nichts getestet |
-| 3 | absichtlich verweigert: ein anderer Lauf hält die Sperre |
+| 0 | fine |
+| 1 | test failed (the tool itself worked) |
+| 2 | configuration or environment error, nothing was tested |
+| 3 | refused on purpose: another run holds the lock |
 
-Ein einziger durchgefallener Lauf lässt den ganzen Aufruf durchfallen. Niemand
-soll Zeilen zusammenzählen müssen, um zu erfahren, ob etwas kaputt ist.
+A single failed run fails the whole call. Nobody should have to add up lines to
+find out whether something is broken.
 
 ## --json
 
-Genau ein JSON-Objekt auf stdout, sonst nichts. Fortschritts- und Warnmeldungen
-landen im Feld `messages`, das Ergebnis in `data`.
+Exactly one JSON object on stdout, nothing else. Progress and warning messages end
+up in the `messages` field, the result in `data`.
 
 ```json
 { "ok": true, "command": "run", "exitCode": 0, "messages": ["..."], "data": { "runs": [ ... ] } }
 ```
 
-Die Konsolenausgabe des Spiels wird abgefangen und verworfen, sonst stünde Unitys
-Allocator-Konfiguration vor dem Envelope.
+The game's console output is captured and discarded, otherwise Unity's allocator
+configuration would sit in front of the envelope.
 
-Im JSON-Modus ist `--visual` standardmäßig `defer`: es sitzt niemand an einer
-Konsole, der die Frage beantworten könnte, und ein unbeantworteter Lauf darf nicht
-als bestätigt gelten.
+In JSON mode `--visual` defaults to `defer`: there is nobody at a console who could
+answer the question, and an unanswered run must not count as confirmed.
 
-## Einrichten
+## Setting up
 
 ```bash
 tb init
 ```
 
-Legt `testbench.json` und die Ordner darunter an, alles abgeleitet vom Ort der
-Exe. `--bench-root <pfad>` setzt einen anderen Ort, `--game-root <pfad>` weist auf
-schon vorhandene Installationen, `--lang <sprache>` legt die Sprache fest.
+Writes `testbench.json` and creates the folders below it, all derived from where
+the exe lies. `--bench-root <path>` picks a different place, `--game-root <path>`
+points at installations that already exist, `--lang <language>` sets the language.
 
 ```bash
 tb import --psd1 D:\7DTD-Bench\Testbench.psd1 --mod-out D:\Mods\MyMod\test\testbench.mod.json
 ```
 
-Trennt eine alte `.psd1` in Maschinen- und Mod-Teil, schreibt den Mod-Teil neben
-den Mod und registriert ihn. Mehrere Importe verschmelzen die Maschinenteile;
-Abweichungen bei einer schon bekannten Abhängigkeit werden gemeldet und **nicht**
-übernommen.
+Splits an old `.psd1` into a machine part and a mod part, writes the mod part next
+to the mod and registers it. Several imports merge their machine parts; differences
+in an already known dependency are reported and **not** taken over.
 
 ```bash
 tb import --gui-verified D:\7DTD-Bench\gui-verified.json --mod mymod
@@ -61,60 +59,61 @@ tb import --gui-verified D:\7DTD-Bench\gui-verified.json --mod mymod
 tb doctor
 ```
 
-Prüft Pfade, Versionen, Dependency-Quellen, Mod-Quellen, alle regulären Ausdrücke,
-laufende Spiele, die Laufsperre, die GamePrefs gegen die Goldwerte und offene
-Sichtprüfungen. Exit 2, wenn so kein Lauf stattfinden kann.
+Checks paths, versions, dependency sources, mod sources, every regular expression,
+running games, the run lock, the GamePrefs against the golden values and open
+visual checks. Exit 2 when no run can happen like this.
 
-Für jede Version vergleicht er außerdem drei voneinander unabhängige Aussagen:
-die eingetragene Id, den Build in `MicrosoftGame.Config` und die Zeile
-`INF Version:` des letzten echten Laufs. Widersprechen sie sich, ist jeder Report
-über diese Version falsch, und kein Log würde das je sagen.
+For every version it also compares three independent statements: the registered id,
+the build in `MicrosoftGame.Config` and the `INF Version:` line of the last real
+run. If they contradict each other, every report about that version is wrong, and
+no log would ever say so.
 
-## Nachschauen
+## Looking around
 
 ```bash
 tb versions
 ```
 
-Spalte *Build* ist die Identity-Version aus `MicrosoftGame.Config` der
-Installation. Status `GEAENDERT` heißt: dort liegt ein anderer Build als beim
-Eintragen, der Ordnername stimmt also nicht mehr.
+The *Build* column is the identity version from the installation's
+`MicrosoftGame.Config`. Status `CHANGED` means a different build lies there than at
+registration time, so the folder name no longer holds.
 
-### Versionen finden statt eintippen
+### Finding versions instead of typing them
 
 ```bash
 tb versions scan
 ```
 
-Sucht unter `gameRoot` (oder `--root <ordner>`, Standardtiefe 2, `--depth n`)
-nach Installationen und sagt für jede, welche Version sie ist und woher er das
-weiß. Er steigt nicht in eine gefundene Installation hinein.
+Searches under `gameRoot` (or `--root <folder>`, default depth 2, `--depth n`) for
+installations and says for each one which version it is and how it knows. It does
+not descend into an installation it found.
 
 ```bash
 tb versions scan --add
 ```
 
-Trägt alles ein, worüber es keinen Zweifel gibt, und notiert für schon
-eingetragene Versionen den Build nach. Ein Ordner, dessen Name seinem Build
-widerspricht, wird **nicht** eingetragen: das ist der Fall, in dem ein Report
-hinterher eine Version behauptet, die nie getestet wurde. Mit `--force` trotzdem.
+Registers everything there is no doubt about, and fills in the build for versions
+already registered. A folder whose name contradicts its build is **not**
+registered: that is the case where a report afterwards claims a version that was
+never tested. With `--force` anyway.
 
 ```bash
 tb versions add --path "D:\7DTD-Bench\Games\7DTD-3.2.0"
 ```
 
-Liest die Version aus der Installation. Mit `tb versions add 3.2.0 --path <ordner>`
-gibst du sie selbst vor, mit `tb versions add 3.2.0 --branch v3.2.0` ohne Ordner
-legt er ihn an und druckt den `DepotDownloader`-Befehl. Das Tool lädt nichts
-selbst herunter: Passwort und Steam-Guard-Code gibst du selbst ein.
+Reads the version out of the installation. With
+`tb versions add 3.2.0 --path <folder>` you state it yourself; with
+`tb versions add 3.2.0 --branch v3.2.0` and no folder it creates one and prints the
+`DepotDownloader` command. The tool downloads nothing itself: password and Steam
+Guard code are yours to enter.
 
-**Woher die Version kommt.** In einer Installation steht die Versionsnummer
-nirgends als Text; `Assembly-CSharp.dll` baut den String erst zur Laufzeit
-zusammen. Verwertbar ist die Identity-Version in `MicrosoftGame.Config`: 3.0.1
-liefert `1.301.4.0`, 3.1.0 liefert `1.310.14.0`. Nur diese dreistellige Form wird
-gelesen, alles andere fällt auf den Ordnernamen zurück. Die letzte Instanz bleibt
-die Zeile `INF Version:` eines echten Laufs, und genau die vergleicht
-`tb doctor` gegen den Eintrag.
+**Where the version comes from.** Inside an installation the version number is
+nowhere to be found as text; `Assembly-CSharp.dll` assembles the string at runtime.
+What is usable is the identity version in `MicrosoftGame.Config`: 3.0.1 ships
+`1.301.4.0`, 3.1.0 ships `1.310.14.0`. Only that three-digit form is read,
+everything else falls back to the folder name. The final authority remains the
+`INF Version:` line of a real run, and that is exactly what `tb doctor` compares
+against the entry.
 
 ```bash
 tb mods
@@ -124,7 +123,7 @@ tb mods
 tb profiles --mod mymod
 ```
 
-## Testen
+## Testing
 
 ```bash
 tb run --mod mymod --profile matrix
@@ -134,69 +133,68 @@ tb run --mod mymod --profile matrix
 tb run --mod mymod --version 3.0.1 --stage headless
 ```
 
-Optionen von `run`:
+Options of `run`:
 
-| Option | Wirkung |
+| Option | Effect |
 |---|---|
-| `--mod <id>` | eindeutiges Fragment der modId genügt |
-| `--profile <name>` | benannte Kombination; explizite Argumente gewinnen |
-| `--version <v>` | mehrfach oder kommagetrennt; ohne Angabe alle bekannten |
-| `--variant <name>` | ohne Angabe die erste Variante des Mods |
-| `--stage headless\|gui` | mehrfach möglich, Reihenfolge wie angegeben |
-| `--visual ask\|defer\|ok` | Standard: `ask` am Terminal, `defer` mit `--json` |
-| `--skip-deploy` | nimmt, was in der Installation liegt |
-| `--timeout <s>`, `--ready-pattern <regex>` | überschreiben die Konfiguration |
-| `--note <text>` | wird im Run-Record gespeichert |
+| `--mod <id>` | a unique fragment of the modId is enough |
+| `--profile <name>` | named combination; explicit arguments win |
+| `--version <v>` | repeatable or comma separated; all known ones if omitted |
+| `--variant <name>` | the mod's first variant if omitted |
+| `--stage headless\|gui` | repeatable, in the order given |
+| `--visual ask\|defer\|ok` | default: `ask` at a terminal, `defer` with `--json` |
+| `--skip-deploy` | takes whatever lies in the installation |
+| `--timeout <s>`, `--ready-pattern <regex>` | override the configuration |
+| `--note <text>` | stored in the run record |
 
-Ein GUI-Lauf endet, wenn das Fenster geschlossen wird.
+A GUI run ends when the window is closed.
 
-## Auswerten
+## Reading the results
 
 ```bash
 tb status --pending
 ```
 
 ```bash
-tb verify --run 20260731-222549_mymod_3.0.1_gui --visual ok --note "Controller-Zeile da, Doppeltipp dasht"
+tb verify --run 20260731-222549_mymod_3.0.1_gui --visual ok --note "controller line is there, double tap dashes"
 ```
 
-Nur für GUI-Läufe. Ein Headless-Lauf führt nichts Grafisches aus, da gibt es
-nichts, was ein Auge bestätigt haben könnte.
+For GUI runs only. A headless run executes nothing graphical, so there is nothing an
+eye could have confirmed.
 
 ```bash
 tb report --mod mymod --write
 ```
 
-Zeigt die Matrix und die `TESTED_VERSIONS`-Zeile, mit `--write` zusätzlich als
-Markdown unter `resultRoot`. Eine Version kommt nur auf die Liste, wenn Stufe 1
-`OK` ist **und** ein GUI-Lauf **für die aktuelle Mod-Version** die Sichtprüfung
-bestätigt hat.
+Shows the matrix and the `TESTED_VERSIONS` line, with `--write` also as markdown
+under `resultRoot`. A version only makes the list when stage 1 is `OK` **and** a GUI
+run **for the current mod version** had its visual check confirmed.
 
 ```bash
 tb log --run <runId>
 ```
 
-Ohne weitere Angabe die auffälligen Zeilen, mit `--lines <n>` die letzten n
-Zeilen des Logs.
+Without further arguments the interesting lines, with `--lines <n>` the last n lines
+of the log.
 
-## Sprache
+## Language
 
 ```bash
 tb lang
 ```
 
-Zeigt jede vorhandene Sprache, welche aktiv ist, welche die Systemsprache wäre und
-wie viele Schlüssel einer Übersetzung fehlen.
+Shows every available language, which one is active, which one the system language
+would be and how many keys a translation is missing.
 
 ```bash
 tb lang german
 ```
 
-Setzt sie und schreibt sie in die `testbench.json`. `tb lang <sprache> --check`
-nennt jeden fehlenden Schlüssel. `--lang <sprache>` gilt nur für einen Aufruf.
-Hintergrund in [i18n.md](i18n.md).
+Sets it and writes it into `testbench.json`. `tb lang <language> --check` names
+every missing key. `--lang <language>` applies to one call only. Background in
+[i18n.md](i18n.md).
 
-## Ablauf für einen Agenten
+## The sequence for an agent
 
 ```bash
 tb doctor --json
@@ -214,5 +212,5 @@ tb status --pending --json
 tb report --mod mymod --json
 ```
 
-Der Agent kann alles außer der Sichtprüfung. Die bleibt offen, bis ein Mensch
-`tb verify` sagt oder in der GUI antwortet.
+An agent can do everything except the visual check. That one stays open until a
+human says `tb verify` or answers in the GUI.

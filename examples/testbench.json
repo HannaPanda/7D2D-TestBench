@@ -11,7 +11,7 @@
 
   // One test installation per version: <gameRoot>\7DTD-<version>.
   // NEVER your played installation. A run moves every foreign mod into
-  // _Mods-deaktiviert; tb refuses a version that lies in the Steam library.
+  // _Mods-disabled; tb refuses a version that lies in the Steam library.
   "gameRoot": "D:\\7DTD-Bench\\Games",
 
   // Save games and settings of the test runs, kept between runs so Navezgane

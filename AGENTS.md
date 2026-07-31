@@ -1,133 +1,134 @@
-# AGENTS.md - 7DTD Multiversion-Testbench
+# AGENTS.md - 7DTD Multiversion Testbench
 
-Einstieg für KI-Agenten in dieses Repo. Zuerst lesen.
+The entry point for AI agents into this repository. Read this first.
 
-## Was das ist
+## What this is
 
-Ein Werkzeug, das einen 7-Days-to-Die-Mod gegen mehrere Spielversionen testet,
-ohne die gespielte Installation oder den Spielstand anzufassen. Ein Kern
-(`Testbench.Core`), zwei Oberflächen: `tb.exe` für die Kommandozeile und Agenten,
-ein WPF-Fenster für den Menschen, dreizehn Sprachen.
+A tool that tests a 7 Days to Die mod against several game versions without
+touching the installation somebody plays or their save games. One core
+(`Testbench.Core`), two front ends: `tb.exe` for the command line and for agents, a
+WPF window for the human, thirteen languages.
 
-Es ersetzt drei PowerShell-Skripte, die unter [`legacy/`](legacy/) liegen. Sie sind
-die Referenz für den Paritätsnachweis und werden nicht mehr gepflegt.
+It replaces three PowerShell scripts, which live under [`legacy/`](legacy/). They are
+the reference for the parity proof and are not maintained any more.
 
-## Docs-Map
+## Docs map
 
-- [`docs/architecture/core.md`](docs/architecture/core.md) - Bausteine, Reihenfolge
-  eines Laufs, Urteilsreihenfolge, was absichtlich nicht gemacht wird.
-- [`docs/architecture/config-schema.md`](docs/architecture/config-schema.md) - die
-  drei Konfigurationsebenen, jedes Feld, und welche davon Fallen sind.
-- [`docs/conventions/traps.md`](docs/conventions/traps.md) - **wichtigste Datei.**
-  Sechzehn Fallen, die alle bezahlt worden sind. Vor jeder Änderung an Deploy,
-  Prefs, Launcher oder Analyzer den passenden Absatz lesen.
-- [`docs/cli.md`](docs/cli.md) - Verben, Optionen, Exit-Codes, `--json`.
-- [`docs/i18n.md`](docs/i18n.md) - wie Texte übersetzt werden, und die Regel, dass
-  jeder neue Text in **allen** ausgelieferten Katalogen landet. Die Tests
-  erzwingen das.
-- [`examples/`](examples/) - kommentierte `testbench.json` und
-  `testbench.mod.json` mit generischen Pfaden. Beim Schema-Ändern mitpflegen.
+- [`docs/architecture/core.md`](docs/architecture/core.md) - building blocks, the
+  order of a run, the order of the verdict, what is deliberately not done.
+- [`docs/architecture/config-schema.md`](docs/architecture/config-schema.md) - the
+  three configuration levels, every field, and which of them are traps.
+- [`docs/conventions/traps.md`](docs/conventions/traps.md) - **the most important
+  file.** Sixteen traps, all of them paid for. Before any change to deploy, prefs,
+  launcher or analyzer, read the matching paragraph.
+- [`docs/cli.md`](docs/cli.md) - verbs, options, exit codes, `--json`.
+- [`docs/i18n.md`](docs/i18n.md) - how texts are translated, and the rule that every
+  new text lands in **all** shipped catalogs. The tests enforce it.
+- [`examples/`](examples/) - commented `testbench.json` and `testbench.mod.json` with
+  generic paths. Keep them current when the schema changes.
 
-Docs werden mitgepflegt: jede Änderung an Verhalten, Architektur oder
-Konfiguration aktualisiert die passende Datei im selben Commit.
+Docs are maintained along with the code: any change to behaviour, architecture or
+configuration updates the matching file in the same commit.
 
-## Aufbau
+**The language of this repository is English** - code, comments, docs, commit
+messages, issues. The tool itself speaks thirteen languages, but its documentation
+has exactly one, so that a mod author anywhere can read it and contribute. German
+belongs in `lang\german.json` and nowhere else.
 
-| Pfad | Inhalt |
+## Layout
+
+| Path | Contents |
 |---|---|
-| `src/Testbench.Core/` | die ganze Logik, kennt keine Oberfläche |
-| `src/Testbench.Cli/` | `tb.exe` (AssemblyName ist `tb`) |
-| `src/Testbench.Gui/` | WPF-Fenster |
-| `tests/Testbench.Core.Tests/` | xunit, inklusive `fixtures/` mit vier echten Logs |
+| `src/Testbench.Core/` | all of the logic, knows no user interface |
+| `src/Testbench.Cli/` | `tb.exe` (the AssemblyName is `tb`) |
+| `src/Testbench.Gui/` | WPF window |
+| `tests/Testbench.Core.Tests/` | xunit, including `fixtures/` with four real logs |
 
-`net10.0-windows` überall: Registry, 7DTD und WPF sind Windows-gebunden.
+`net10.0-windows` everywhere: the registry, 7DTD and WPF are all Windows-bound.
 
-## Umgebung
+## Environment
 
-Wo auf einem Rechner was liegt, steht in dessen `testbench.json` und wird von
-`tb doctor --json` vollständig ausgegeben. Nichts im Code, in den Tests oder in
-dieser Doku darf einen Laufwerksbuchstaben, einen Benutzernamen oder einen
-bestimmten Mod voraussetzen: das Werkzeug ist zur Veröffentlichung gedacht.
+Where things lie on a machine is written in that machine's `testbench.json` and is
+printed in full by `tb doctor --json`. Nothing in the code, in the tests or in these
+docs may assume a drive letter, a user name or a particular mod: this tool is meant
+to be published.
 
-Die Struktur, die `tb init` anlegt:
+The structure `tb init` creates:
 
 ```
 <bench>\               tb.exe, Testbench.Gui.exe, lang\, testbench.json
-<bench>\Games\         eine Testinstallation je Version: 7DTD-<version>
-<bench>\UserData\      Spielstände und Einstellungen der Läufe
-<bench>\results\       Logs und Markdown-Reports
-<bench>\state\         Run-Store, Laufsperre, Fensterzustand
+<bench>\Games\         one test installation per version: 7DTD-<version>
+<bench>\UserData\      save games and settings of the runs
+<bench>\results\       logs and markdown reports
+<bench>\state\         run store, run lock, window state
 ```
 
-- Die **gespielte** Installation gehört nicht dazu. `SteamLocator` findet sie, und
-  `TestRunner` wie `Doctor` **verweigern** eine Version, die dort liegt: ein Lauf
-  würde die Modlist auseinandernehmen.
-- Für Fragen zur 7DTD-Engine oder -API ist die **`7d2d-modding`-Skill** das
-  richtige Werkzeug: sie befragt die echte `Assembly-CSharp.dll`. Nie aus dem
-  Gedächtnis antworten.
+- The **played** installation is not part of this. `SteamLocator` finds it, and both
+  `TestRunner` and `Doctor` **refuse** a version that lies there: a run would take
+  the modlist apart.
+- For questions about the 7DTD engine or API, the **`7d2d-modding` skill** is the
+  right tool: it queries the real `Assembly-CSharp.dll`. Never answer from memory.
 
-## Häufige Aufgaben
+## Common tasks
 
-- **Mod gegen alle Versionen testen** →
+- **Test a mod against every version** →
   `tb run --mod <fragment> --profile matrix --json`
-- **Neue Spielversion aufnehmen** → wenn die Installation schon da ist:
-  `tb versions scan --add` (liest die Version aus `MicrosoftGame.Config`, nicht aus
-  dem Ordnernamen, siehe [Falle 16](docs/conventions/traps.md#16-der-ordnername-ist-keine-versionsangabe)).
-  Wenn sie noch fehlt: `tb versions add <version> --branch <branch>`, dann die
-  Installation mit dem gedruckten `DepotDownloader`-Befehl holen (das macht der
-  Mensch, wegen Passwort und Steam-Guard). Im Fenster macht das der Knopf
-  *verwalten* neben VERSIONEN.
-- **Neuen Mod aufnehmen** → `testbench.mod.json` in `<repo>\test\` anlegen, dann
-  `tb mods add <pfad>`. Schema in
+- **Register a new game version** → if the installation is already there:
+  `tb versions scan --add` (reads the version from `MicrosoftGame.Config`, not from
+  the folder name, see
+  [trap 16](docs/conventions/traps.md#16-the-folder-name-is-not-a-version)).
+  If it is not there yet: `tb versions add <version> --branch <branch>`, then fetch
+  the installation with the printed `DepotDownloader` command (the human does that,
+  because of the password and Steam Guard). In the window this is the *manage* button
+  next to VERSIONS.
+- **Register a new mod** → create a `testbench.mod.json` in `<repo>\test\`, then
+  `tb mods add <path>`. Schema in
   [config-schema.md](docs/architecture/config-schema.md).
-- **Warum läuft es nicht** → `tb doctor --json`, nicht Logs durchsuchen.
-- **Kompatibilitätsliste** → `tb report --mod <fragment> --write`.
+- **Why does it not run** → `tb doctor --json`, not searching through logs.
+- **Compatibility list** → `tb report --mod <fragment> --write`.
 
-## Regeln, die nicht verhandelbar sind
+## Rules that are not negotiable
 
-1. **Alles, was das Spiel startet, geht durch `PrefsGuard`.** Die GamePrefs liegen
-   in `HKCU`, werden von allen Installationen geteilt und sind durch keinen
-   Startparameter umbiegbar. Ohne Sicherung überschreibt ein Lauf die getunten
-   Live-Settings, lautlos.
-2. **`--visual ok` setzt nur ein Mensch, der hingesehen hat.** Ein Agent nimmt
-   `--visual defer`. Headless führt nichts Grafisches und keine Eingabe aus, ein
-   Lognachweis kann eine Sichtprüfung nicht ersetzen.
-3. **Ein Lauf gleichzeitig.** `RunLock` ist maschinenweit. Nicht umgehen.
-4. **Die Live-Installation und die Modlist werden nicht verändert.** Geschrieben
-   wird nur in `gameRoot`-Installationen und `userDataRoot`.
-5. **Kein Zähler wird "aufgeräumt", ohne die Paritätstests anzusehen.** Die
-   Erwartungswerte in `LogAnalyzerParityTests` stammen aus der alten
-   PowerShell-Logik auf denselben Dateien. Wer sie ändert, ändert, was als getestet
-   gemeldet wird.
-6. **Fallenkommentare im Code bleiben stehen.** Sie sind die Absicherung, nicht
-   Dekoration.
+1. **Everything that starts the game goes through `PrefsGuard`.** The GamePrefs live
+   in `HKCU`, are shared by every installation and are redirectable by no launch
+   parameter. Without a backup a run overwrites tuned live settings, silently.
+2. **`--visual ok` is set only by a human who looked.** An agent uses
+   `--visual defer`. Headless executes nothing graphical and nothing input related; log
+   evidence cannot replace a visual check.
+3. **One run at a time.** `RunLock` is machine-wide. Do not work around it.
+4. **The live installation and the modlist are not modified.** Writing happens only
+   into `gameRoot` installations and `userDataRoot`.
+5. **No counter is "cleaned up" without looking at the parity tests.** The expected
+   values in `LogAnalyzerParityTests` come from the old PowerShell logic on the same
+   files. Changing them changes what gets reported as tested.
+6. **Trap comments in the code stay where they are.** They are the safeguard, not
+   decoration.
 
-## Die GUI
+## The GUI
 
-`Testbench.Gui.exe`, ein Fenster, ohne MVVM-Paket: `MainViewModel` ist eine
-Klasse mit handgeschriebenem `INotifyPropertyChanged`. Läufe laufen auf einem
-Threadpool-Thread, Meldungen gehen über `Dispatcher.BeginInvoke` zurück.
+`Testbench.Gui.exe`, one window, without an MVVM package: `MainViewModel` is a class
+with hand-written `INotifyPropertyChanged`. Runs happen on a thread pool thread,
+messages come back through `Dispatcher.BeginInvoke`.
 
-Drei Entscheidungen, die man kennen muss:
+Three decisions worth knowing:
 
-- **GUI-Läufe sind immer `VisualMode.Defer`.** Die Frage landet im Kasten unten,
-  nicht in einem Modal-Dialog, der aufgeht, während das Spiel noch zugeht. Das ist
-  dieselbe Warteschlange, in der die Läufe eines Agenten liegen.
-- **Das Log wird live aus der Datei nachgezogen** (`RunOptions.LogPathReady` plus
-  ein Tail mit `FileShare.ReadWrite`). Ohne das sieht ein 35-Sekunden-Start aus wie
-  ein hängendes Programm.
-- **`VersionsWindow` arbeitet auf derselben `MachineConfig`-Instanz** wie das
-  Hauptfenster und schreibt sie sofort. Danach ruft das Hauptfenster
-  `ReloadVersions()`, was die Häkchen behält und eine gerade neu eingetragene
-  Version schon angehakt anbietet.
+- **GUI runs are always `VisualMode.Defer`.** The question lands in the panel at the
+  bottom, not in a modal dialog that opens while the game is still shutting down.
+  That is the same queue an agent's runs sit in.
+- **The log is tailed live from the file** (`RunOptions.LogPathReady` plus a tail with
+  `FileShare.ReadWrite`). Without it a 35-second start looks like a hung program.
+- **`VersionsWindow` works on the same `MachineConfig` instance** as the main window
+  and saves it immediately. Afterwards the main window calls `ReloadVersions()`,
+  which keeps the check marks and offers a freshly registered version already
+  checked.
 
-## Stand
+## State
 
-Belegt, nicht behauptet: Paritätslauf gegen `legacy/Invoke-SmokeTest.ps1` auf
-derselben Installation mit identischem Status und identischen Zählern, und vier
-echte Logs als Fixtures, deren Erwartungswerte aus der alten PowerShell-Logik
-gemessen sind. Die Testsuite ist grün und deckt Analyzer, Versionserkennung und
-die Vollständigkeit aller Sprachkataloge ab.
+Proven, not claimed: a parity run against `legacy/Invoke-SmokeTest.ps1` on the same
+installation with identical status and identical counters, and four real logs as
+fixtures whose expected values are measured from the old PowerShell logic. The test
+suite is green and covers the analyzer, version detection, the trash folder migration
+and the completeness of every language catalog.
 
-Offen und bewusst offen: ob das Fenster gut *aussieht*, kann hier so wenig ein
-Test beantworten wie eine Sichtprüfung im Spiel.
+Open, and deliberately open: whether the window *looks* good is as little a question
+for a test here as a visual check inside the game is.

@@ -30,5 +30,5 @@ public sealed class CommandContext
     public RunStore Store => new(Machine);
 
     public (ModConfig Config, string Path) RequireMod() =>
-        ConfigStore.RequireMod(Machine, Args.Get("mod") ?? throw new UsageException("--mod fehlt."));
+        ConfigStore.RequireMod(Machine, Args.Get("mod") ?? throw new UsageException(Core.I18n.Loc.T("cli.optionMissing", "mod")));
 }

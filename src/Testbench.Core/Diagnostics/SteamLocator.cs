@@ -7,7 +7,7 @@ namespace Testbench.Core.Diagnostics;
 /// Finds the player's own, live 7DTD installation.
 ///
 /// Not so it can be tested - the opposite. A test run sweeps every mod it did
-/// not put there into _Mods-deaktiviert and hands the GamePrefs around. Pointed
+/// not put there into _Mods-disabled and hands the GamePrefs around. Pointed
 /// at the Steam copy somebody actually plays, it would take their modlist apart
 /// on the first run. So the live installation is located in order to be refused:
 /// <see cref="Doctor"/> turns a version that lives there into a failure.

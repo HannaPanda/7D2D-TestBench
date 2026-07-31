@@ -123,7 +123,8 @@ public static class VersionScanner
     /// <summary>Folders that are never an installation of their own and cost time to walk.</summary>
     private static readonly string[] SkipDirs =
     {
-        "Mods", "_Mods-deaktiviert", "Data", "7DaysToDie_Data", "EasyAntiCheat",
+        "Mods", Deploy.ModDeployer.TrashFolder, Deploy.ModDeployer.LegacyTrashFolder,
+        "Data", "7DaysToDie_Data", "EasyAntiCheat",
         "logs", "Saves", ".git", "node_modules", "$RECYCLE.BIN", "System Volume Information",
     };
 

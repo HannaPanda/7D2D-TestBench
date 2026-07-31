@@ -51,6 +51,7 @@
   "deploy.modSourceMissing": "Mod source not found: {0}",
   "deploy.depSourceMissing": "Dependency '{0}' is not under '{1}'.",
   "deploy.unknownDependency": "Mod '{0}' requires '{1}', which is not in dependencyLibrary.",
+  "deploy.circularDependency": "The dependencies of '{0}' are circular.",
   "deploy.deleteFailed": "'{0}' could not be deleted: {1} Is 7DaysToDie.exe still running? The game holds the mod DLLs open.",
   "deploy.cannotRemove": "Could not move '{0}' out of the Mods folder - the run would prove nothing.",
 
@@ -153,6 +154,7 @@
   "cli.noKey": "N",
   "cli.version.line": "7DTD Multiversion Testbench {0}, language {1}",
   "cli.unknownCommand": "Unknown command '{0}'.",
+  "cli.optionMissing": "--{0} is missing.",
   "cli.noSuchRun": "No run '{0}'. tb status",
   "cli.folderMissing": "Folder missing: {0}",
   "cli.stageUnknown": "--stage '{0}' is not something I know. headless or gui.",

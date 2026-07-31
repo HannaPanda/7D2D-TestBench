@@ -1,51 +1,51 @@
-# Konfiguration
+# Configuration
 
-Drei Ebenen, damit nichts doppelt gepflegt werden muss.
+Three levels, so nothing has to be maintained twice.
 
-| Ebene | Datei | Gehört wem |
+| Level | File | Belongs to |
 |---|---|---|
-| Maschine | `D:\7DTD-Bench\testbench.json` | diesem Rechner |
-| Mod | `<repo>\test\testbench.mod.json` | dem Mod, liegt in seinem Repo |
-| Profil | im Mod-JSON unter `profiles` | einer benannten Testkombination |
+| Machine | `D:\7DTD-Bench\testbench.json` | this computer |
+| Mod | `<repo>\test\testbench.mod.json` | the mod, lives in its repo |
+| Profile | in the mod JSON under `profiles` | a named test combination |
 
-Im alten Bench lag beides in derselben `.psd1`, weshalb jeder Mod eine eigene
-Kopie von `GameRoot`, `UserDataRoot`, `PrefsKey` und `Dependencies` mitschleppte
-und jede dieser Kopien veralten konnte.
+In the old bench both lived in the same `.psd1`, which is why every mod dragged its
+own copy of `GameRoot`, `UserDataRoot`, `PrefsKey` and `Dependencies` along, and
+every one of those copies could go stale.
 
-## Fundort der Maschinenkonfiguration
+## Where the machine configuration is looked for
 
-In dieser Reihenfolge:
+In this order:
 
-1. `--config <pfad>`
-2. Umgebungsvariable `TESTBENCH_CONFIG`
-3. `<exe-ordner>\testbench.json`
-4. `<exe-ordner>\..\testbench.json`
+1. `--config <path>`
+2. environment variable `TESTBENCH_CONFIG`
+3. `<exe folder>\testbench.json`
+4. `<exe folder>\..\testbench.json`
 
-Punkt 4 ist der Normalfall: `tb.exe` liegt in `D:\7DTD-Bench\bin`, die Config
-eine Ebene darüber.
+Number 4 is the normal case: `tb.exe` lies in `D:\7DTD-Bench\bin`, the config one
+level above.
 
 ## testbench.json
 
 ```jsonc
 {
-  "language": "auto",                        // "german", "english", ... oder Systemsprache
-  "gameRoot": "D:\\7DTD-Bench\\Games",                  // Installationen: <gameRoot>\7DTD-<version>
-  "userDataRoot": "D:\\7DTD-Bench\\UserData", // <root>\<version> bzw. <version>-gui
+  "language": "auto",                        // "german", "english", ... or the system language
+  "gameRoot": "D:\\7DTD-Bench\\Games",       // installations: <gameRoot>\7DTD-<version>
+  "userDataRoot": "D:\\7DTD-Bench\\UserData", // <root>\<version> or <version>-gui
   "resultRoot": "D:\\7DTD-Bench\\results",
-  "stateRoot": "D:\\7DTD-Bench\\state",  // Run-Store und Lockfile
+  "stateRoot": "D:\\7DTD-Bench\\state",      // run store and lock file
 
   "prefs": {
     "key": "HKCU\\Software\\The Fun Pimps\\7 Days To Die",
     "backupDir": "D:\\7DTD-Bench\\prefs-backup",
-    "goldenValues": {}                       // optional, siehe unten
+    "goldenValues": {}                       // optional, see below
   },
 
-  "versions": [                              // tb versions scan --add schreibt das
-    { "id": "3.0.1", "branch": "v3.0.1", "build": "1.301.4.0", "notes": "Live-Version" },
+  "versions": [                              // tb versions scan --add writes this
+    { "id": "3.0.1", "branch": "v3.0.1", "build": "1.301.4.0", "notes": "live version" },
     { "id": "3.1.0", "path": "D:\\7DTD-Bench\\Games\\7DTD-3.1.0", "build": "1.310.14.0" }
   ],
 
-  "modConfigs": [                            // wo die Mod-Configs liegen
+  "modConfigs": [                            // where the mod configs live
     "D:\\Mods\\MyMod\\test\\testbench.mod.json"
   ],
 
@@ -64,56 +64,55 @@ eine Ebene darüber.
 }
 ```
 
-### Felder mit Fallen
+### Fields that are traps
 
-- **`versions[].path`** leer lassen heißt `<gameRoot>\7DTD-<id>`. Nur setzen, wenn
-  eine Installation woanders liegt.
-- **`versions[].readyPattern`** überschreibt den globalen Marker für eine Version.
-  Nötig, wenn TFP den Wortlaut ändert.
-- **`versions[].build`** ist die Identity-Version aus `MicrosoftGame.Config`, wie
-  sie beim Eintragen dort stand. Nicht von Hand pflegen: sie ist der
-  Vergleichswert, an dem `tb doctor` merkt, dass Steam den Ordner im Nachhinein
-  aktualisiert hat und der Ordnername damit lügt. Siehe
-  [traps.md](../conventions/traps.md#16-der-ordnername-ist-keine-versionsangabe).
-- **`readyPattern`** darf nicht auf Telnet warten, siehe
-  [traps.md](../conventions/traps.md#2-nicht-auf-started-telnet-warten). `tb doctor`
-  prüft das.
-- **`dependencyLibrary[].folder`** trägt die Ladereihenfolge im Namen (`0-`,
-  `00000-`). 7DTD sortiert nach Ordnernamen, die Präfixe sind also tragend und
-  werden nicht verschönert. Der Schlüssel (`gears`) ist das, was man tippt.
-- **`keepMods`** ist die einzige Liste, die der Aufräumschritt kennt. Der Mod unter
-  Test und alles aus seinen Dependencies kommen automatisch dazu; alles andere
-  wandert nach `_Mods-deaktiviert`.
-- **`ignorePatterns`** bewusst eng halten: hier gehört nur hinein, was nachweislich
-  auch ohne Mod erscheint. Treffer werden gezählt und ausgewiesen, nicht
-  verschluckt.
-- **`prefs.goldenValues`** ist optional und normalerweise leer. Jeder Restore wird
-  ohnehin geprüft, indem der ganze Registry-Key erneut exportiert und gegen die
-  Sicherung verglichen wird (`PrefsGuard.RoundTrip`); das funktioniert für jede
-  Einstellung und ohne Konfiguration. Einträge hier bedeuten zusätzlich "und dieser
-  Wert muss danach genau das ergeben", für Einstellungen, die man auf keinen Fall
-  verlieren will.
-- **`language`** ist ein Katalogname aus `lang\` (`english`, `german`,
-  `schinese`, ...) oder `"auto"` für die Systemsprache mit Englisch als Rückfall.
-  Siehe [i18n.md](../i18n.md).
+- **`versions[].path`** left empty means `<gameRoot>\7DTD-<id>`. Only set it when an
+  installation lies somewhere else.
+- **`versions[].readyPattern`** overrides the global marker for one version. Needed
+  when TFP change the wording.
+- **`versions[].build`** is the identity version from `MicrosoftGame.Config` as it
+  stood there at registration time. Do not maintain it by hand: it is the reference
+  value by which `tb doctor` notices that Steam updated the folder afterwards and
+  that the folder name is therefore lying. See
+  [traps.md](../conventions/traps.md#16-the-folder-name-is-not-a-version).
+- **`readyPattern`** must not wait for Telnet, see
+  [traps.md](../conventions/traps.md#2-do-not-wait-for-started-telnet). `tb doctor`
+  checks that.
+- **`dependencyLibrary[].folder`** carries the load order in its name (`0-`,
+  `00000-`). 7DTD sorts by folder name, so the prefixes are load-bearing and do not
+  get prettified. The key (`gears`) is what you type.
+- **`keepMods`** is the only list the cleanup step knows about. The mod under test
+  and everything from its dependencies are added automatically; everything else
+  moves into `_Mods-disabled`.
+- **`ignorePatterns`** stays deliberately narrow: only what demonstrably appears
+  without a mod as well belongs in here. Hits are counted and reported, not
+  swallowed.
+- **`prefs.goldenValues`** is optional and normally empty. Every restore is verified
+  anyway, by exporting the whole registry key again and comparing it against the
+  backup (`PrefsGuard.RoundTrip`); that works for every setting and without any
+  configuration. Entries here additionally mean "and this value has to come out
+  exactly like this", for settings you absolutely do not want to lose.
+- **`language`** is a catalog name from `lang\` (`english`, `german`, `schinese`,
+  ...) or `"auto"` for the system language with English as the fallback. See
+  [i18n.md](../i18n.md).
 
-Kommentare und nachgestellte Kommas sind in diesen Dateien erlaubt (der Parser
-überliest sie), damit man von Hand hineinschreiben kann, warum etwas so steht.
-Vollständige, kommentierte Beispiele liegen in [`examples/`](../../examples/).
+Comments and trailing commas are allowed in these files (the parser skips them), so
+you can write into them by hand why something is the way it is. Complete, commented
+examples are in [`examples/`](../../examples/).
 
 ## testbench.mod.json
 
 ```jsonc
 {
-  "modId": "mymod",     // aus ModInfo.xml <Name>, kleingeschrieben
-  "displayName": "My Mod",        // aus ModInfo.xml <DisplayName>
+  "modId": "mymod",     // from ModInfo.xml <Name>, lowercased
+  "displayName": "My Mod",        // from ModInfo.xml <DisplayName>
   "repo": "D:\\Mods\\MyMod",
 
   "variants": [
     { "name": "Default", "folder": "MyMod" }
   ],
 
-  "dependencies": ["quartz", "gears"],   // Schlüssel aus dependencyLibrary
+  "dependencies": ["quartz", "gears"],   // keys from dependencyLibrary
 
   "stage1": {
     "harmonyPattern": "Harmony patches applied",
@@ -124,8 +123,8 @@ Vollständige, kommentierte Beispiele liegen in [`examples/`](../../examples/).
   "stage2": {
     "logFilter": "My Mod|HarmonyException| EXC | ERR ",
     "evidencePatterns": ["MyMod: registered"],
-    "evidenceLabel": "Registrierung im Log belegt",
-    "visualQuestion": "Sah die Blocktextur richtig aus und ging die Taste?"
+    "evidenceLabel": "registration proven in the log",
+    "visualQuestion": "Did the block texture look right and did the key work?"
   },
 
   "profiles": [
@@ -137,37 +136,37 @@ Vollständige, kommentierte Beispiele liegen in [`examples/`](../../examples/).
 }
 ```
 
-### Felder mit Fallen
+### Fields that are traps
 
-- **`modId`** kommt aus `ModInfo.xml` `<Name>`, weil genau dieser Name im Log
-  steht. Auf der Kommandozeile genügt ein eindeutiges Fragment (`--mod mymod`).
-- **`variants`** ist eine Liste, kein festes Survival/Creative-Paar. Ein Mod ohne
-  Editionen hat eine Variante; der Importer klappt zwei identische Ordner zu einer
-  namens `Default` zusammen.
-- **`variants[].folder`** ist der Ordnername im Mods-Verzeichnis und **nicht**
-  zwangsläufig der gemeldete Modname.
-- **`stage1.harmonyPattern`** sieht wie ein Vanilla-Marker aus und ist keiner, die
-  Zeile gehört dem Mod. Ein reiner XML-Mod setzt `requireHarmony: false`.
-- **`stage2.evidencePatterns`**: **alle** müssen im Log vorkommen. Leere Liste
-  bedeutet "für diesen Mod gibt es keinen im Log belegbaren Nachweis" und wird als
-  solches ausgewiesen, statt ein leeres Muster als bestanden zu verbuchen.
-- **`stage2.visualQuestion`** stand früher fest im Skript, weshalb ein GUI-Lauf
-  jedes Mods nach dem Block eines bestimmten anderen Mods fragte.
-- **`profiles`** sind der Grund, dass niemand eine Kombination von Hand
-  zusammenbauen muss. Explizite Argumente gewinnen weiterhin, ein Profil ist also
-  auch ein Startpunkt.
+- **`modId`** comes from `ModInfo.xml` `<Name>`, because that is exactly the name
+  that appears in the log. On the command line a unique fragment is enough
+  (`--mod mymod`).
+- **`variants`** is a list, not a fixed Survival/Creative pair. A mod without
+  editions has one variant; the importer folds two identical folders into a single
+  one called `Default`.
+- **`variants[].folder`** is the folder name in the Mods directory and **not**
+  necessarily the reported mod name.
+- **`stage1.harmonyPattern`** looks like a vanilla marker and is not one, the line
+  belongs to the mod. A pure XML mod sets `requireHarmony: false`.
+- **`stage2.evidencePatterns`**: **all** of them have to occur in the log. An empty
+  list means "for this mod there is no evidence a log can carry" and is reported as
+  such, instead of booking an empty pattern as passed.
+- **`stage2.visualQuestion`** used to be hardcoded in the script, which is why a GUI
+  run of any mod asked about one particular other mod's block.
+- **`profiles`** are the reason nobody has to assemble a combination by hand.
+  Explicit arguments still win, so a profile is also just a starting point.
 
-## Run-Store
+## Run store
 
-Jeder Lauf ist eine Datei unter `<stateRoot>\runs\<runId>.json`, `runId` ist
-`<zeitstempel>_<modId>_<version>_<stufe>`. Ersetzt `gui-verified.json`, das genau
-einen Eintrag pro Mod/Version/Edition hielt und damit keine Historie hatte.
+Every run is a file under `<stateRoot>\runs\<runId>.json`, where `runId` is
+`<timestamp>_<modId>_<version>_<stage>`. It replaces `gui-verified.json`, which held
+exactly one entry per mod/version/edition and therefore had no history.
 
-Übernahme alter Bestätigungen:
+Taking over old confirmations:
 
 ```bash
 tb import --gui-verified D:\7DTD-Bench\gui-verified.json --mod mymod
 ```
 
-Akzeptiert `EvidenceOk` und `AtlasOk`, weil beide Schreibweisen in der Datei
-vorkommen konnten. Genau diese Uneinigkeit hat den alten Bench nutzlos gemacht.
+Accepts `EvidenceOk` and `AtlasOk`, because both spellings could occur in the file.
+That very disagreement is what made the old bench useless.

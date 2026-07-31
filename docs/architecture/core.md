@@ -1,111 +1,115 @@
-# Architektur
+# Architecture
 
-## Ein Kern, zwei Oberflächen
+## One core, two front ends
 
 ```
-Testbench.Core                 die ganze Logik, kennt keine Oberfläche
-   ├── tb.exe                  CLI, --json, definierte Exit-Codes
-   └── Testbench.Gui           WPF-Fenster
+Testbench.Core                 all of the logic, knows no user interface
+   ├── tb.exe                  CLI, --json, defined exit codes
+   └── Testbench.Gui           WPF window
 ```
 
-Beide Oberflächen referenzieren `Testbench.Core` direkt und schreiben in denselben
-Run-Store auf Platte. Es gibt keinen Daemon und keinen Server. Das ist möglich,
-weil ohnehin nur ein Lauf gleichzeitig stattfinden darf (siehe `RunLock`), und
-Ausschluss über einen Named Mutex billiger und robuster ist als ein Prozess, der
-laufen muss.
+Both front ends reference `Testbench.Core` directly and write into the same run
+store on disk. There is no daemon and no server. That works because only one run may
+happen at a time anyway (see `RunLock`), and mutual exclusion through a named mutex
+is cheaper and more robust than a process that has to be running.
 
-Der Grund für die Trennung: in den PowerShell-Skripten stand die Reihenfolge der
-Schritte zweimal, in `Invoke-SmokeTest.ps1` und in `Start-Gui.ps1`, und die beiden
-waren schon auseinandergelaufen. Jetzt kennt nur `TestRunner` diese Reihenfolge.
+The reason for the split: in the PowerShell scripts the order of the steps existed
+twice, in `Invoke-SmokeTest.ps1` and in `Start-Gui.ps1`, and the two had already
+drifted apart. Now only `TestRunner` knows that order.
 
-## Die Bausteine
+## The building blocks
 
-| Typ | Zuständig für |
+| Type | Responsible for |
 |---|---|
-| `Config/MachineConfig` | diese Maschine: Pfade, Versionsregister, Dependency-Bibliothek, Muster |
-| `Config/ModConfig` | einen Mod: Varianten, Dependency-Referenzen, Stage1/Stage2, Profile |
-| `Config/ConfigStore` | Laden, Speichern, Validieren, Fundort der `testbench.json` |
-| `Config/Psd1Importer` | Einmalmigration der alten `.psd1` |
-| `Deploy/ModInfoReader` | `<Name>`, `<DisplayName>`, `<Version>` aus `ModInfo.xml` |
-| `Deploy/DirectoryMirror` | Zielordner durch exakte Kopie ersetzen |
-| `Deploy/ModDeployer` | Mods-Ordner auf definierten Stand bringen, Dependencies auflösen |
-| `Prefs/PrefsGuard` | GamePrefs sichern, zurückspielen, gegen Goldwerte prüfen |
-| `Run/GameLauncher` | Spiel starten, auf Marker oder Fensterschluss warten |
-| `Run/LogAnalyzer` | **rein**: Log rein, Zähler und Urteil raus |
-| `Run/TestRunner` | die Reihenfolge der Schritte, einmal |
-| `Run/RunLock` | ein Lauf gleichzeitig, maschinenweit |
-| `Store/RunStore` | jeder Lauf als eine JSON-Datei, plus Import von `gui-verified.json` |
-| `Report/ReportBuilder` | Matrix, Markdown, `TESTED_VERSIONS`-Zeile |
-| `Diagnostics/Doctor` | warum es nicht läuft, vor dem Lauf |
+| `Config/MachineConfig` | this machine: paths, version register, dependency library, patterns |
+| `Config/ModConfig` | one mod: variants, dependency references, stage 1/stage 2, profiles |
+| `Config/ConfigStore` | loading, saving, validating, finding `testbench.json` |
+| `Config/Psd1Importer` | one-off migration of the old `.psd1` |
+| `Config/VersionScanner` | finding installations and reading their real version |
+| `Deploy/ModInfoReader` | `<Name>`, `<DisplayName>`, `<Version>` from `ModInfo.xml` |
+| `Deploy/DirectoryMirror` | replacing a target folder with an exact copy |
+| `Deploy/ModDeployer` | bringing the Mods folder to a defined state, resolving dependencies |
+| `Prefs/PrefsGuard` | backing up GamePrefs, restoring them, verifying the restore |
+| `Run/GameLauncher` | starting the game, waiting for a marker or for the window to close |
+| `Run/LogAnalyzer` | **pure**: log in, counters and verdict out |
+| `Run/TestRunner` | the order of the steps, once |
+| `Run/RunLock` | one run at a time, machine-wide |
+| `Store/RunStore` | every run as one JSON file, plus import of `gui-verified.json` |
+| `Report/ReportBuilder` | matrix, markdown, `TESTED_VERSIONS` line |
+| `Diagnostics/Doctor` | why it does not run, before the run |
+| `Diagnostics/SteamLocator` | finding the played installation in order to refuse it |
+| `I18n/Loc` | the language catalogs, see [i18n.md](../i18n.md) |
 
-## Reihenfolge eines Laufs
+## The order of a run
 
-`TestRunner.Run` macht genau das, in dieser Folge:
+`TestRunner.Run` does exactly this, in this sequence:
 
-1. Installation und `7DaysToDie.exe` prüfen, sonst `FEHLT`.
-2. Läuft schon eine `7DaysToDie.exe`? Dann `FEHLER`, denn zwei Instanzen teilen
-   Steam, Ports und Prefs-Key.
-3. Bei Stufe 2 warnen, wenn Steam nicht läuft.
-4. UserDataFolder gegen die Live-Daten prüfen (`%APPDATA%\7DaysToDie`).
-5. Deployen: Fremdmods nach `_Mods-deaktiviert`, Mod spiegeln, Dependencies
-   spiegeln. Immer spiegeln, nicht nur bei fehlendem Ordner, sonst hätte jede
-   Installation je nach Vorgeschichte eine andere Gears-Version.
-6. GamePrefs sichern. Scheitert das, bricht der Lauf ab.
-7. Starten und warten. Headless auf `readyPattern`, `fatalPattern` oder Timeout;
-   GUI, bis der Mensch das Fenster schließt.
-8. GamePrefs im `finally` zurückspielen, genau einmal, und die Goldwerte prüfen.
-9. Log auswerten, Dependencies im Log nachweisen, Urteil bilden.
-10. Bei Stufe 2: Nachweismuster prüfen und die Sichtprüfung behandeln.
-11. Record speichern.
+1. Check the installation and `7DaysToDie.exe`, otherwise `NOT INSTALLED`.
+2. Refuse an installation that lies in the Steam library: that is the copy somebody
+   plays, and a run would take its modlist apart.
+3. Is a `7DaysToDie.exe` already running? Then `SETUP ERROR`, because two instances
+   share Steam, ports and the prefs key.
+4. On stage 2, warn when Steam is not running.
+5. Check the user data folder against the live data (`%APPDATA%\7DaysToDie`).
+6. Deploy: foreign mods into `_Mods-disabled`, mirror the mod, mirror the
+   dependencies. Always mirror, not only when the folder is missing, otherwise every
+   installation would have a different Gears version depending on its history.
+7. Back up the GamePrefs. If that fails, the run aborts.
+8. Start and wait. Headless for `readyPattern`, `fatalPattern` or timeout; GUI until
+   the human closes the window.
+9. Restore the GamePrefs in a `finally`, exactly once, then verify the restore by
+   exporting the key again and comparing it against the backup.
+10. Analyze the log, prove the dependencies in the log, form the verdict.
+11. On stage 2: check the evidence patterns and handle the visual check.
+12. Save the record.
 
-Der Rückgabewert ist immer ein `RunRecord`, auch wenn etwas schiefgeht. Kein Pfad
-durch diese Methode gibt "nichts" zurück.
+The return value is always a `RunRecord`, even when something goes wrong. No path
+through this method returns "nothing".
 
-## Warum der Analyzer rein ist
+## Why the analyzer is pure
 
-`LogAnalyzer` hat keinen Zugriff auf Dateisystem, Prozesse oder Config-Schreiben.
-Dadurch ist jede Zahl, die ein Lauf berichtet, aus einem gespeicherten Log
-reproduzierbar, und genau das macht die Portierung überhaupt überprüfbar:
-`tests/Testbench.Core.Tests/LogAnalyzerParityTests.cs` fährt vier echte Logs
-gegen die Zähler, die die PowerShell-Logik für dieselben Dateien geliefert hat.
+`LogAnalyzer` has no access to the file system, to processes or to writing config.
+That makes every number a run reports reproducible from a stored log, and that is
+what makes the port checkable in the first place:
+`tests/Testbench.Core.Tests/LogAnalyzerParityTests.cs` runs four real logs against
+the counters the PowerShell logic produced for the same files.
 
-Bewusster Unterschied: die Spielversion wird bis zum ersten Komma behalten
-(`V 3.1.0 (b14) Compatibility Version: V 3.1.0`), weil die Buildnummer zwei
-Veröffentlichungen derselben Versionsnummer unterscheidet.
-`Invoke-SmokeTest.ps1` schnitt nach `V 3.1.0` ab; die Kurzform gibt es weiter als
-`GameVersionShort`.
+A deliberate difference: the game version is kept up to the first comma
+(`V 3.1.0 (b14) Compatibility Version: V 3.1.0`), because the build number
+distinguishes two releases of the same version number. `Invoke-SmokeTest.ps1` cut
+after `V 3.1.0`; the short form is still available as `GameVersionShort`.
 
-## Urteilsreihenfolge
+## The order of the verdict
 
-`LogAnalyzer.Verdict` prüft in dieser Ordnung, und die ist tragend:
+`LogAnalyzer.Verdict` checks in this order, and the order is load-bearing:
 
 ```
-FATAL > MOD NICHT GELADEN > ABHAENGIGKEIT FEHLT > HARMONY FEHLT
-      > EXCEPTIONS > ERRORS > XML-WARNUNGEN > TIMEOUT > OK
+FATAL > MOD NOT LOADED > DEPENDENCY MISSING > HARMONY MISSING
+      > EXCEPTIONS > ERRORS > XML WARNINGS > TIMEOUT > OK
 ```
 
-Ein Lauf, dessen Mod nie geladen wurde, sagt nichts über Fehlerzahlen aus. Eine
-fehlende Abhängigkeit macht jeden Test der Integration mit ihr wertlos. Beides
-steht deshalb über den Zählern.
+A run whose mod never loaded says nothing about error counts. A missing dependency
+makes every test of the integration with it worthless. Both therefore rank above the
+counters.
 
-## Mensch und Agent
+## Human and agent
 
-Die einzige Information, die kein Skript erzeugen kann, ist `VisualState`. Ein
-Agent startet einen GUI-Lauf mit `--visual defer`, der Lauf bleibt als `Pending`
-liegen, und erst `tb verify --run <id> --visual ok` (oder die GUI) schließt ihn
-ab. `RunRecord.FullyVerified` verlangt Stufe 2, `Status == Ok`, bestätigte
-Sichtprüfung und einen nicht fehlgeschlagenen Lognachweis.
+The one piece of information no script can produce is `VisualState`. An agent starts
+a GUI run with `--visual defer`, the run stays there as `Pending`, and only
+`tb verify --run <id> --visual ok` (or the GUI) closes it. `RunRecord.FullyVerified`
+requires stage 2, `Status == Ok`, a confirmed visual check and log evidence that did
+not fail.
 
-Nur solche Läufe dürfen über `ReportBuilder` in eine `TESTED_VERSIONS`-Zeile
-geraten, und die Bestätigung ist an die Mod-Version gebunden: ein Release, das am
-DLL- oder Atlas-Code dreht, entwertet jede ältere Sichtprüfung.
+Only such runs may reach a `TESTED_VERSIONS` line through `ReportBuilder`, and the
+confirmation is bound to the mod version: a release that touches DLL or atlas code
+invalidates every earlier visual check.
 
-## Was hier absichtlich nicht gemacht wird
+## What is deliberately not done here
 
-- **Parallele Läufe.** Nicht möglich, siehe `RunLock`.
-- **Installationen selbst herunterladen.** `tb versions add` legt den Ordner an
-  und druckt den `DepotDownloader`-Befehl. Passwort und Steam-Guard-Code gibt der
-  Mensch selbst ein; das Tool sieht sie nie.
-- **Die Live-Modlist anfassen.** Der Bench liest aus
-  `C:\Modlists\Smorgasbord\...` nur, um Gears und Quartz zu spiegeln. Geschrieben
-  wird ausschließlich in die Testinstallationen unter `gameRoot`.
+- **Parallel runs.** Not possible, see `RunLock`.
+- **Downloading installations.** `tb versions add` creates the folder and prints the
+  `DepotDownloader` command. Password and Steam Guard code are entered by the human;
+  the tool never sees them.
+- **Touching the live modlist.** The bench reads from a modlist folder such as
+  `C:\Modlists\<your list>\...` only in order to mirror Gears and Quartz. Writing
+  happens exclusively into the test installations under `gameRoot`.

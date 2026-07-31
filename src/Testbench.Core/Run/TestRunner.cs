@@ -97,7 +97,7 @@ public sealed class TestRunner
             return Finish(run, RunStatus.Missing, Loc.T("run.noInstall", gameDir));
 
         // Refused, not warned about: a run sweeps every mod it did not install
-        // into _Mods-deaktiviert. Pointed at the copy somebody plays, it would
+        // into _Mods-disabled. Pointed at the copy somebody plays, it would
         // take their modlist apart, and they would find out days later.
         if (Diagnostics.SteamLocator.IsLiveInstall(gameDir))
             return Finish(run, RunStatus.SetupError, Loc.T("run.isLiveInstall", gameDir));

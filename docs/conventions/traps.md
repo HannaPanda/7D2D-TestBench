@@ -1,215 +1,217 @@
-# Fallen, die dieses Projekt kennt
+# Traps this project knows about
 
-Alles hier ist bezahlt worden: entweder mit einem Testlauf, der grün meldete und
-nichts geprüft hatte, oder mit verlorenen Einstellungen. Wer eine dieser Stellen
-anfasst, liest vorher den Absatz dazu.
+Everything here has been paid for: either with a test run that reported green and
+had checked nothing, or with lost settings. Anybody who touches one of these
+places reads the matching paragraph first.
 
-Der Code verweist an den betroffenen Stellen hierher zurück; die Kommentare dort
-sind Teil der Absicherung und werden nicht "aufgeräumt".
+The code points back here at the affected spots. Those comments are part of the
+safeguard and do not get "tidied up".
 
-## 1. GamePrefs liegen in der Registry und werden geteilt
+## 1. GamePrefs live in the registry and are shared
 
-7DTD legt seine Optionen als Unity PlayerPrefs unter
-`HKCU\Software\The Fun Pimps\7 Days To Die` ab. Das ist **außerhalb** des
-UserDataFolders, wird von **allen** Installationen geteilt und ist durch
-**keinen** Startparameter umbiegbar. Ein frisch entpackter Build schreibt beim
-ersten Start seine Defaults hinein und überschreibt lautlos die getunten
-Live-Settings (`DynamicMeshDistance`, `DynamicMeshUseImposters`,
-`OptionsGfxTexQuality`, `OptionsGfxViewDistance`).
+7DTD stores its options as Unity PlayerPrefs under
+`HKCU\Software\The Fun Pimps\7 Days To Die`. That is **outside** the user data
+folder, shared by **every** installation, and redirectable by **no** launch
+parameter. A freshly unpacked build writes its defaults in there on first start
+and silently overwrites tuned live settings (`DynamicMeshDistance`,
+`DynamicMeshUseImposters`, `OptionsGfxTexQuality`, `OptionsGfxViewDistance`).
 
-Beweis, falls jemand zweifelt: ein Start mit brandneuem, leerem UserDataFolder
-loggt trotzdem `Last played version`.
+Proof, in case anybody doubts it: a start with a brand new, empty user data
+folder still logs `Last played version`.
 
-Konsequenz im Code: `PrefsGuard` sichert vor jedem Lauf per `reg export` und
-spielt hinterher zurück, im `finally` und genau einmal. Nach dem Restore werden
-die vier Werte gegen `prefs.goldenValues` geprüft und Abweichungen gemeldet. Die
-alten Skripte haben restauriert und dem Ergebnis vertraut.
+Consequence in the code: `PrefsGuard` backs the key up with `reg export` before
+every run and imports it back afterwards, in a `finally` and exactly once. After
+the restore it exports the key a second time and compares it value by value
+against the backup, so "restored" is a verified statement rather than a hope. The
+old scripts restored and trusted the outcome.
 
-Unity verunstaltet PlayerPrefs-Namen zu `<name>_h<hash>`, deshalb wird per Präfix
-gesucht und nicht literal verglichen.
+Unity mangles PlayerPrefs names into `<name>_h<hash>`, which is why lookups go by
+prefix instead of comparing literally.
 
-**Wer etwas Neues baut, das das Spiel startet, muss durch `PrefsGuard` gehen.**
+**Anything new that starts the game has to go through `PrefsGuard`.**
 
-## 2. Nicht auf `Started Telnet` warten
+## 2. Do not wait for `Started Telnet`
 
-Diese Zeile kommt nach etwa 2,7 Sekunden, lange bevor die XMLs geladen sind. Ein
-Lauf, der darauf wartet, meldet grün und hat praktisch nichts getestet. Der
-Marker ist `INF StartGame done` (bei 3.0.0 empirisch nach 31,7 s).
+That line arrives after about 2.7 seconds, long before the XMLs are loaded. A run
+that waits for it reports green and has tested next to nothing. The marker is
+`INF StartGame done` (measured at 31.7 s on 3.0.0).
 
-`Doctor` schlägt Alarm, wenn `readyPattern` das Wort Telnet enthält.
+`Doctor` raises an alarm when `readyPattern` contains the word Telnet.
 
-## 3. `Move-Item -Force` überschreibt kein Verzeichnis
+## 3. `Move-Item -Force` does not overwrite a directory
 
-Es scheitert daran, und mit `-ErrorAction SilentlyContinue` lautlos. Ein Mod, der
-einmal nach `_Mods-deaktiviert` verschoben wurde, blieb dadurch bei jedem
-weiteren Lauf im Mods-Ordner liegen und lud mit, ohne dass irgendwo etwas rot
-wurde.
+It fails on one, and with `-ErrorAction SilentlyContinue` it fails silently. A mod
+that had been moved into the trash folder once therefore stayed in the Mods folder
+on every later run and loaded along, without anything anywhere turning red.
 
-Im Port: `ModDeployer.DisableForeignMods` räumt den Zielordner vorher (die Ablage
-ist per Definition Abfall), verschiebt dann und **prüft danach nach**, dass der
-Quellordner weg ist. Schlägt das fehl, ist es ein Fehler und keine Warnung, denn
-der Lauf wäre nicht aussagekräftig.
+In the port: `ModDeployer.DisableForeignMods` clears the target first (the trash is
+scrap by definition), then moves, and **verifies afterwards** that the source
+folder is gone. If that fails it is an error and not a warning, because the run
+would prove nothing.
 
-Der Fixture-Log `smoke_3.0.0_Survival_2026-07-31_21-40-35.log` ist ein Beleg
-dafür, wie das aussieht: dort sind `AdamantBlock` **und** `MyMod`
-gleichzeitig geladen. Der alte Bench konnte das nicht sehen, weil er nur fragte,
-ob *sein* Mod geladen ist.
+The fixture log `smoke_3.0.0_Survival_2026-07-31_21-40-35.log` is the evidence of
+what that looks like: `AdamantBlock` **and** `MyMod` are loaded at the same time.
+The old bench could not see it, because it only ever asked whether *its own* mod
+had loaded.
 
-## 4. Ordnername ist nicht der gemeldete Modname
+The folder is called `_Mods-disabled`. It used to be `_Mods-deaktiviert`, from the
+days this tool was German only; `ModDeployer.MigrateLegacyTrash` carries an
+existing one over and deliberately overwrites nothing while doing it.
 
-Im Mods-Verzeichnis heißt der Ordner `00000-Gears`, im Log meldet sich der Mod
-als `Gears`. Maßgeblich ist `<Name>` aus der `ModInfo.xml`, und zwar aus der
-**installierten** Kopie, denn nur die sagt, was gleich im Log stehen wird.
+## 4. The folder name is not the reported mod name
 
-Genauso bei Varianten: `AdamantBlock-Creative` meldet sich als `AdamantBlock`.
-Eine Prüfung auf den Ordnernamen ergibt "MOD NICHT GELADEN" für einen Mod, der
-einwandfrei geladen ist. Der Test `Folder_name_is_not_the_reported_name` hält das
-fest.
+In the Mods directory the folder is called `00000-Gears`, in the log the mod
+reports itself as `Gears`. What counts is `<Name>` from `ModInfo.xml`, and from the
+**installed** copy, because only that one says what is about to appear in the log.
 
-`<DisplayName>` ist ein drittes, wieder anderes Ding (`7 Dashes to Die`) und
-taucht nur in der eigenen Logzeile des Mods auf.
+Same with variants: `AdamantBlock-Creative` reports itself as `AdamantBlock`. A
+check against the folder name yields "MOD NOT LOADED" for a mod that loaded
+perfectly. The test `Folder_name_is_not_the_reported_name` holds that down.
 
-## 5. Bereitgestellt ist nicht geladen
+`<DisplayName>` is a third, again different thing (`7 Dashes to Die`) and only
+shows up in the mod's own log line.
 
-Eine Abhängigkeit zu kopieren beweist nichts. Ein einziger Smoketest hat Gears
-und Quartz aus allen drei Installationen nach `_Mods-deaktiviert` verbannt (der
-Aufräumschritt kennt nur `keepMods`), und der nächste GUI-Test stand ohne
-Settingsmenü da, ohne dass irgendwo etwas fehlgeschlagen wäre.
+## 5. Provided is not loaded
 
-Deshalb wird für jede Abhängigkeit `[MODS] Loaded Mod: <gemeldeter Name>` im Log
-nachgewiesen. Fehlt die Zeile, ist der Status `ABHAENGIGKEIT FEHLT` und nicht
-`OK`. Gears braucht Quartz; das steht einmal in `dependencyLibrary.gears.requires`
-und wird aufgelöst, statt in jeder Mod-Konfiguration in der richtigen Reihenfolge
-wiederholt zu werden.
+Copying a dependency proves nothing. A single smoke test banished Gears and Quartz
+from all three installations into the trash folder (the cleanup step only knows
+`keepMods`), and the next GUI test stood there without a settings menu, without
+anything having failed anywhere.
 
-## 6. `Harmony patches applied` ist keine Zeile des Spiels
+That is why `[MODS] Loaded Mod: <reported name>` is proven in the log for every
+dependency. If the line is missing the status is `DEPENDENCY MISSING` and not
+`OK`. Gears needs Quartz; that fact lives once in
+`dependencyLibrary.gears.requires` and is resolved, instead of being repeated in
+the right order in every mod configuration.
 
-Es sieht wie ein Vanilla-Marker aus und ist keiner. Die echte Zeile gehört dem
-Mod:
+## 6. `Harmony patches applied` is not a line of the game
+
+It looks like a vanilla marker and is not one. The real line belongs to the mod:
 
     INF [7 Dashes to Die] loaded from ...\Mods\MyMod, Harmony patches applied
 
-Der Default funktioniert für beide bestehenden Mods, weil beide ihre
-Startmeldung zufällig so beenden. Ein Mod, der es anders formuliert, muss
-`stage1.harmonyPattern` setzen, sonst gilt jeder Lauf als `HARMONY FEHLT`. Ein
-Mod ohne DLL setzt `stage1.requireHarmony` auf `false`; im alten Bench konnte ein
-reiner XML-Mod nie `OK` erreichen.
+The default works for both existing mods because both happen to end their startup
+message that way. A mod that words it differently has to set
+`stage1.harmonyPattern`, otherwise every run counts as `HARMONY MISSING`. A mod
+without a DLL sets `stage1.requireHarmony` to `false`; in the old bench a pure XML
+mod could never reach `OK`.
 
-## 7. Headless deckt nichts Grafisches und nichts Eingabebezogenes ab
+## 7. Headless covers nothing graphical and nothing input related
 
-Unter `-batchmode -nographics` läuft `TextureAtlasBlocks.LoadTextureAtlas` nicht,
-die Atlas-/Textur-Injektion ist also **nicht** getestet. Menüs, Tasten und
-Controller werden überhaupt nicht angefasst.
+Under `-batchmode -nographics`, `TextureAtlasBlocks.LoadTextureAtlas` does not run,
+so atlas and texture injection are **not** tested. Menus, keys and controllers are
+not touched at all.
 
-Deshalb gibt es Stufe 2, deshalb ist `VisualState` ein eigenes Feld, und deshalb
-darf `--visual ok` nur ein Mensch setzen, der hingesehen hat. Ein Agent
-verwendet `--visual defer`; der Lauf bleibt dann als `Pending` liegen, bis
-jemand `tb verify` sagt.
+That is why stage 2 exists, why `VisualState` is a field of its own, and why
+`--visual ok` may only be set by a human who looked. An agent uses
+`--visual defer`; the run then sits there as `Pending` until somebody says
+`tb verify`.
 
-## 8. Erfolgreiche XML-Patches loggt 7DTD nicht
+## 8. 7DTD does not log successful XML patches
 
-"0 Treffer" heißt "nichts kaputt", nicht "geprüft". Die Muster in
-`xmlProblemPattern` stammen aus den echten Meldungstexten in `Assembly-CSharp`
-(UTF-16-Bytesuche), nicht geraten:
+"0 hits" means "nothing broken", not "checked". The patterns in `xmlProblemPattern`
+come from the real message texts in `Assembly-CSharp` (UTF-16 byte search), not
+from guesswork:
 
     XML loader: Loading XML patch file '{0}' from mod '{1}' failed:
     XML patch for "{0}" from mod "{1}" did not apply: {2} (line {3} ...)
     XML.Patch ({0}, line {1} at pos {2}): Patch type ({3}) unknown
     XML loader: XML is missing: ...
 
-Negativkontrolle vorhanden: `smoke_3.0.0_Creative_2026-07-29_18-33-00.log`
-enthält einen absichtlich kaputten xpath und liefert genau einen XML-Treffer,
-aber keinen ERR (die Meldung ist eine `WRN`-Zeile). Der Test
-`Broken_xpath_is_found_as_an_xml_problem_only` hält beides fest.
+A negative control exists: `smoke_3.0.0_Creative_2026-07-29_18-33-00.log` contains
+a deliberately broken xpath and yields exactly one XML hit but no ERR (the message
+is a `WRN` line). The test `Broken_xpath_is_found_as_an_xml_problem_only` holds
+both down.
 
-## 9. `grep -a` auf `Assembly-CSharp.dll` findet keine String-Literale
+## 9. `grep -a` on `Assembly-CSharp.dll` does not find string literals
 
-.NET legt Metadaten-Namen als UTF-8 ab, Literale als UTF-16 im `#US`-Heap. Ein
-negativer Treffer beweist nur "kein Member-Name", nicht "kommt nicht vor". Gilt
-für jede Suche nach einem Meldungstext im Spiel.
+.NET stores metadata names as UTF-8 and literals as UTF-16 in the `#US` heap. A
+negative hit only proves "not a member name", not "does not occur". This holds for
+any search for a message text inside the game.
 
-## 10. Rauschen wird gezählt, nicht verschluckt
+## 10. Noise is counted, not swallowed
 
-`ignorePatterns` entfernt bekanntes Startrauschen (`[EOS]`, `[Discord]`,
-Newsfile) **vor** dem Zählen, damit eine ignorierte Zeile nicht als Fehler
-mitzählt. Die Zahl der entfernten Zeilen wird aber ausgewiesen. Stilles
-Wegfiltern ist genau die Sorte grüner Haken, die nichts bedeutet.
+`ignorePatterns` removes known startup noise (`[EOS]`, `[Discord]`, news file)
+**before** counting, so an ignored line does not count as an error. The number of
+removed lines is reported, though. Filtering things away silently is exactly the
+kind of green checkmark that means nothing.
 
-Die Liste bleibt bewusst eng: hier gehört nur hinein, was nachweislich auch ohne
-Mod erscheint.
+The list stays deliberately narrow: only what demonstrably appears without a mod
+as well belongs in it.
 
-## 11. PowerShell-Fallen (gelten für alle PS-Reste)
+## 11. PowerShell traps (they hold for every PS remnant)
 
-Der Port ist C#, aber es gibt weiterhin PowerShell im Spiel (`Psd1Importer` ruft
-`Import-PowerShellDataFile`, und die alten Skripte liegen als Referenz noch
-unter `D:\7DTD-Bench`).
+The port is C#, but PowerShell is still involved (`Psd1Importer` calls
+`Import-PowerShellDataFile`, and the old scripts are still around under
+[`legacy/`](../../legacy/) as reference).
 
-- **Native Exes und `$ErrorActionPreference='Stop'`:** unter PowerShell 5.1 wird
-  jede stderr-Zeile eines nativen Programms zu einem `NativeCommandError` und
-  reißt das Skript um, **auch bei Exit-Code 0**. Nie `*> $null` auf `reg.exe`;
-  nach Exit-Code urteilen. Der Grundsatz gilt im Port weiter: `PrefsGuard.Reg`
-  bewertet den Exit-Code, nicht die Anwesenheit von stderr-Ausgabe.
-- **`-match` auf einem Array** filtert nur und füllt `$Matches` nicht. Erst die
-  Zeile ziehen, dann einzeln matchen.
-- **`ConvertFrom-Json` gibt ein JSON-Array als EIN Objekt** in die Pipeline.
-  `@(...)` entpackt das nicht, sondern verpackt es zusätzlich. `[object[]]`
-  castet korrekt.
-- **`ConvertTo-Json` macht aus einem einelementigen Array einen Skalar.**
-  `Psd1Importer.StrList` akzeptiert deshalb String **und** Array.
-- **`Get-Content` erzeugt keine leere letzte Zeile** für eine Datei, die mit
-  Newline endet. Alle Zähler des alten Benchs sind so gemessen, deshalb macht
-  `GameLauncher.SplitLines` es genauso. Ohne das wären Zeilenzahl und
-  "ignoriert" gegenüber jedem alten Report um eins verschoben.
-- **`cd X && befehl` gibt es in PowerShell 5.1 nicht.** `&&` ist ein
-  Parser-Fehler. Das war einer der Gründe, aus denen dieses Tool existiert.
+- **Native exes and `$ErrorActionPreference='Stop'`:** under PowerShell 5.1 every
+  stderr line of a native program becomes a `NativeCommandError` and tears the
+  script down, **even on exit code 0**. Never `*> $null` on `reg.exe`; judge by
+  exit code. The principle still holds in the port: `PrefsGuard.Reg` evaluates the
+  exit code, not the presence of stderr output.
+- **`-match` on an array** only filters and does not fill `$Matches`. Pull the line
+  first, then match it on its own.
+- **`ConvertFrom-Json` puts a JSON array into the pipeline as ONE object.**
+  `@(...)` does not unpack that, it wraps it once more. `[object[]]` casts
+  correctly.
+- **`ConvertTo-Json` turns a single-element array into a scalar.**
+  `Psd1Importer.StrList` therefore accepts a string **and** an array.
+- **`Get-Content` produces no empty last line** for a file that ends with a
+  newline. Every counter of the old bench was measured that way, which is why
+  `GameLauncher.SplitLines` does the same. Without it, line count and "ignored"
+  would be off by one against every old report.
+- **`cd X && command` does not exist in PowerShell 5.1.** `&&` is a parser error.
+  That was one of the reasons this tool exists.
 
-## 12. Zwei Läufe gleichzeitig gehen nicht
+## 12. Two runs at the same time do not work
 
-Sie teilen Steam, die Server-Ports und vor allem den Prefs-Key: die Sicherung des
-zweiten Laufs würde die Defaults des ersten einfangen und die anschließend als
-"die getunten Werte" zurückspielen. `RunLock` (Named Mutex plus Lockfile)
-verhindert das maschinenweit, weil GUI und Agent beide Läufe starten können.
+They share Steam, the server ports and above all the prefs key: the backup of the
+second run would capture the defaults of the first and then restore those as "the
+tuned values". `RunLock` (named mutex plus lock file) prevents that machine-wide,
+because the GUI and an agent can both start runs.
 
-## 13. Das Spiel hält Dateien offen
+## 13. The game holds files open
 
-Die Mod-DLL ist gesperrt, solange `7DaysToDie.exe` läuft, und der Prozess ist
-weg, bevor seine Handles es sind. Deshalb wartet `GameLauncher.WaitUntilGone`
-auf jeden `7DaysToDie*`-Prozess und danach noch zwei Sekunden. Das Logfile wird
-mit `FileShare.ReadWrite | FileShare.Delete` gelesen, weil das Spiel es während
-des Laufs offen hält.
+The mod DLL is locked as long as `7DaysToDie.exe` runs, and the process is gone
+before its handles are. That is why `GameLauncher.WaitUntilGone` waits for every
+`7DaysToDie*` process and then two seconds more. The log file is read with
+`FileShare.ReadWrite | FileShare.Delete`, because the game keeps it open during the
+run.
 
-## 14. Unity redet auf stdout, auch mit `-logfile`
+## 14. Unity talks on stdout, even with `-logfile`
 
-Die Allocator-Konfiguration und ein paar Startzeilen landen trotzdem auf stdout.
-Vererbt an unsere Konsole würde das im `--json`-Modus vor dem Envelope stehen und
-das Ergebnis unparsbar machen. `GameLauncher.Start` leitet daher beide Ströme um
-und leert sie (ungeleerte Pipes blockieren das Spiel, sobald der Puffer voll ist).
+The allocator configuration and a few startup lines end up on stdout regardless.
+Inherited by our console, that would sit in front of the envelope in `--json` mode
+and make the result unparsable. `GameLauncher.Start` therefore redirects both
+streams and drains them (unread pipes block the game as soon as the buffer is
+full).
 
-## 15. `EvidenceOk` gegen `AtlasOk`
+## 15. `EvidenceOk` versus `AtlasOk`
 
-Der Fehler, der den alten Bench nutzlos machte: `Start-Gui.ps1` schrieb
-`EvidenceOk`, `Invoke-TestMatrix.ps1` las `AtlasOk`. `GuiOk` war damit immer
-`false`, und es wurde **nie** eine `TESTED_VERSIONS`-Zeile vorgeschlagen, obwohl
-drei bestätigte GUI-Läufe im Store lagen. Dazu verglich die Matrix nur die
-Spielversion, nicht Mod und Variante, sodass eine Adamant-Bestätigung einen
-7-Dashes-Lauf grün gemacht hätte.
+The bug that made the old bench useless: `Start-Gui.ps1` wrote `EvidenceOk`,
+`Invoke-TestMatrix.ps1` read `AtlasOk`. `GuiOk` was therefore always `false`, and a
+`TESTED_VERSIONS` line was **never** proposed although three confirmed GUI runs
+sat in the store. On top of that the matrix only compared the game version, not
+mod and variant, so a confirmation for one mod would have turned another mod's run
+green.
 
-Lehre für den Port: ein Store, ein typisiertes Modell, geschrieben und gelesen
-von derselben Stelle. `RunStore.ImportGuiVerified` akzeptiert beide
-Schreibweisen, damit alte Einträge nicht verloren gehen.
+Lesson for the port: one store, one typed model, written and read by the same
+place. `RunStore.ImportGuiVerified` accepts both spellings so old entries are not
+lost.
 
-## 16. Der Ordnername ist keine Versionsangabe
+## 16. The folder name is not a version
 
-`D:\7DTD-Bench\Games\7DTD-3.0.1` heißt nicht, dass dort 3.0.1 liegt. Ein Ordner wird
-umbenannt, kopiert, oder Steam aktualisiert ihn im Bestand, und der Name bleibt
-stehen. Ein Bench, der Versionen nach Ordnernamen führt, meldet dann ruhig weiter
-Ergebnisse für eine Version, die nie gestartet wurde.
+`D:\7DTD-Bench\Games\7DTD-3.0.1` does not mean 3.0.1 is what lies there. A folder
+gets renamed, copied, or Steam updates it in place, and the name stays as it was. A
+bench that tracks versions by folder name then calmly keeps reporting results for a
+version that was never started.
 
-In einer Installation steht die Nummer nirgends als Text: `Assembly-CSharp.dll`
-baut den String erst zur Laufzeit zusammen, eine Suche nach `3.0.1` über den
-ganzen Ordner findet nur EAC- und Steam-Logs. Was es gibt, ist die
-Identity-Version in `MicrosoftGame.Config`, die als
-`1.<major><minor><patch>.<build>` mitgeliefert wird:
+Inside an installation the number is nowhere to be found as text:
+`Assembly-CSharp.dll` assembles the string at runtime, and a search for `3.0.1`
+across the whole folder finds nothing but EAC and Steam logs. What does exist is
+the identity version in `MicrosoftGame.Config`, shipped as
+`1.<major><minor><patch>.<build>`:
 
 | Version | Identity |
 |---|---|
@@ -217,12 +219,12 @@ Identity-Version in `MicrosoftGame.Config`, die als
 | 3.0.1 | `1.301.4.0` |
 | 3.1.0 | `1.310.14.0` |
 
-`VersionScanner.IdFromBuild` liest ausschließlich die dreistellige Mitte. Eine
-andere Form gibt `null` zurück, nicht eine plausibel aussehende falsche Antwort;
-dann übernimmt der Ordnername, und die Zeile sagt, dass geraten wurde.
+`VersionScanner.IdFromBuild` reads the three-digit middle and nothing else. Any
+other shape returns `null` rather than a plausible-looking wrong answer; the folder
+name then takes over, and the line says that this was a guess.
 
-Deshalb gibt es drei Aussagen und einen Vergleich: die eingetragene Id, den Build
-beim Eintragen (`versions[].build`), und die Zeile `INF Version:` des letzten
-echten Laufs, die als einzige keine Namensverwechslung sein kann. `tb doctor`
-stellt sie gegenüber. `tb versions scan` trägt einen Ordner, dessen Name seinem
-Build widerspricht, nicht ohne `--force` ein.
+That is why there are three statements and one comparison: the registered id, the
+build at registration time (`versions[].build`), and the `INF Version:` line of the
+last real run, the only one of the three that cannot be a mix-up of names.
+`tb doctor` puts them side by side. `tb versions scan` does not register a folder
+whose name contradicts its build without `--force`.

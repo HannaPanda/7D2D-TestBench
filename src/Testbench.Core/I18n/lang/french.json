@@ -51,6 +51,7 @@
   "deploy.modSourceMissing": "Source du mod introuvable : {0}",
   "deploy.depSourceMissing": "La dependance '{0}' n'est pas dans '{1}'.",
   "deploy.unknownDependency": "Le mod '{0}' exige '{1}', qui n'est pas dans dependencyLibrary.",
+  "deploy.circularDependency": "Les dependances de '{0}' sont circulaires.",
   "deploy.deleteFailed": "'{0}' n'a pas pu etre supprime : {1} 7DaysToDie.exe tourne-t-il encore ? Le jeu garde les DLL des mods ouvertes.",
   "deploy.cannotRemove": "Impossible de sortir '{0}' du dossier Mods ; l'execution ne prouverait rien.",
 
@@ -152,6 +153,7 @@
   "cli.yesKey": "o",
   "cli.noKey": "N",
   "cli.unknownCommand": "Commande inconnue '{0}'.",
+  "cli.optionMissing": "--{0} est absent.",
   "cli.noSuchRun": "Pas d'execution '{0}'. tb status",
   "cli.folderMissing": "Dossier manquant : {0}",
   "cli.stageUnknown": "--stage '{0}' : je ne connais pas. headless ou gui.",

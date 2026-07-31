@@ -88,7 +88,7 @@ Or open `Testbench.Gui.exe` and click.
 
 ## A warning worth reading
 
-A run moves every mod it did not install itself into `_Mods-deaktiviert`, so that a
+A run moves every mod it did not install itself into `_Mods-disabled`, so that a
 failure provably belongs to the mod under test. Pointed at the installation you
 play, it would take your modlist apart. The tool locates your live installation
 specifically in order to refuse it, in `tb doctor` and in the run itself, but keep

@@ -278,7 +278,7 @@ public static class RunCommands
     public static int Log(CommandContext ctx)
     {
         var runId = ctx.Args.Require("run");
-        var run = ctx.Store.Load(runId) ?? throw new ConfigException($"Kein Lauf '{runId}'. tb status");
+        var run = ctx.Store.Load(runId) ?? throw new ConfigException(Loc.T("cli.noSuchRun", runId));
 
         if (!File.Exists(run.LogPath))
         {

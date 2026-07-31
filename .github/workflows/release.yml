@@ -60,7 +60,7 @@ jobs:
           Copy-Item examples\*.json publish\examples\
           # LICENSE is not optional in the ZIP: MIT only permits redistribution
           # with the notice attached, and that includes my own.
-          Copy-Item README.md, LIESMICH-ZUERST.txt, LICENSE publish\
+          Copy-Item README.md, START-HERE.txt, LICENSE publish\
 
           Remove-Item publish\*.pdb -ErrorAction SilentlyContinue
 
