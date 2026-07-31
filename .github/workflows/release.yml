@@ -1,0 +1,84 @@
+name: release
+
+# A tag makes the release. Nothing here is manual, so what a user downloads is
+# always what the tests ran against.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for a test build, e.g. 1.0.0'
+        required: false
+        default: '0.0.0-dev'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Version from the tag
+        id: v
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = if ($tag -match '^v(?<v>.+)$') { $Matches.v } else { "${{ inputs.version }}" }
+          if (-not $version) { $version = '0.0.0-dev' }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "Building $version"
+
+      # The suite is the gate, not a formality: it checks the log analyzer against
+      # four real game logs and every language catalog for completeness.
+      - name: Test
+        run: dotnet test Testbench.slnx -c Release --nologo
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $v = '${{ steps.v.outputs.version }}'
+          dotnet publish src\Testbench.Cli\Testbench.Cli.csproj -c Release -o publish -p:Version=$v --nologo
+          dotnet publish src\Testbench.Gui\Testbench.Gui.csproj -c Release -o publish -p:Version=$v --nologo
+
+      - name: Assemble the ZIP
+        shell: pwsh
+        run: |
+          $v = '${{ steps.v.outputs.version }}'
+
+          # Framework-dependent on purpose: about two megabytes instead of two
+          # hundred, and the .NET 10 Desktop Runtime is a one-time install that
+          # every download afterwards benefits from.
+          New-Item -ItemType Directory -Force -Path publish\examples | Out-Null
+          Copy-Item examples\*.json publish\examples\
+          Copy-Item README.md, LIESMICH-ZUERST.txt publish\ -ErrorAction SilentlyContinue
+
+          Remove-Item publish\*.pdb -ErrorAction SilentlyContinue
+
+          Get-ChildItem publish -Recurse -File | Select-Object -ExpandProperty FullName
+          Compress-Archive -Path publish\* -DestinationPath "7D2D-TestBench-$v.zip" -Force
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.v.outputs.version }}'
+          gh release create "${{ github.ref_name }}" "7D2D-TestBench-$v.zip" `
+            --title "7D2D-TestBench $v" `
+            --notes-file docs/release-notes.md
+
+      - name: Keep the ZIP for a manual run
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: 7D2D-TestBench
+          path: '*.zip'

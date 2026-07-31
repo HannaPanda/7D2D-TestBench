@@ -1,0 +1,54 @@
+// One mod's test configuration. Belongs in the mod's own repository as
+// <repo>\test\testbench.mod.json, then: tb mods add <path>
+{
+  // Lowercase, and it must be the <Name> of your ModInfo.xml: that is the name
+  // the game writes in "[MODS] Loaded Mod:", and the folder name is often a
+  // different one.
+  "modId": "mymod",
+  "displayName": "My Mod",
+  "repo": "D:\\Mods\\MyMod",
+
+  // One entry per buildable flavour of the mod. "folder" is relative to repo and
+  // is the folder that gets copied into Mods\.
+  "variants": [
+    { "name": "Default", "folder": "MyMod" }
+    // { "name": "Creative", "folder": "MyMod-Creative" }
+  ],
+
+  // Keys from dependencyLibrary in testbench.json. They are provided before the
+  // run and their loading is proven in the log; "provided" is not "loaded".
+  "dependencies": [],
+
+  "stage1": {
+    // The mod's own line, printed by its Harmony patch code. An XML-only mod
+    // never prints it, so requireHarmony has to be false there or every run
+    // fails.
+    "harmonyPattern": "Harmony patches applied",
+    "requireHarmony": true,
+
+    // Additional patterns that end a run immediately, on top of fatalPattern.
+    "extraFatalPatterns": []
+  },
+
+  "stage2": {
+    // Which log lines the GUI run should show; everything else is noise.
+    "logFilter": "My Mod|HarmonyException| EXC | ERR ",
+
+    // What has to be in the log for the GUI run to have proven anything.
+    // Successful XML patches are not logged by 7DTD at all, so without a pattern
+    // here a green run means "nothing broke", never "it worked".
+    "evidencePatterns": ["MyMod: registered"],
+    "evidenceLabel": "Registration proven in the log",
+
+    // Asked after the window closes. Only a human may answer it: -nographics
+    // executes nothing graphical and no input at all.
+    "visualQuestion": "Was the block texture right and did the key work?"
+  },
+
+  // Named combinations, so nobody has to remember arguments.
+  // "versions" empty means every registered version.
+  "profiles": [
+    { "name": "matrix", "stages": ["headless"], "notes": "all versions, before a release" },
+    { "name": "gui", "stages": ["headless", "gui"], "versions": ["3.1.0"], "notes": "visual check on the newest" }
+  ]
+}

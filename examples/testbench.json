@@ -1,0 +1,84 @@
+// Machine configuration. Written by "tb init"; this copy is only here to show
+// what the fields mean. Comments and trailing commas are allowed.
+//
+// Paths in this example assume the tool was unpacked to D:\7DTD-Bench. Nothing
+// in the tool assumes a drive letter - "tb init" derives all of these from where
+// tb.exe lies.
+{
+  // Language of every message: a name from lang\ ("english", "german",
+  // "schinese", ...), or "auto" for the system language with English as fallback.
+  "language": "auto",
+
+  // One test installation per version: <gameRoot>\7DTD-<version>.
+  // NEVER your played installation. A run moves every foreign mod into
+  // _Mods-deaktiviert; tb refuses a version that lies in the Steam library.
+  "gameRoot": "D:\\7DTD-Bench\\Games",
+
+  // Save games and settings of the test runs, kept between runs so Navezgane
+  // does not have to be generated every time.
+  "userDataRoot": "D:\\7DTD-Bench\\UserData",
+
+  "resultRoot": "D:\\7DTD-Bench\\results",
+  "stateRoot": "D:\\7DTD-Bench\\state",
+
+  "prefs": {
+    // 7DTD stores its options as Unity PlayerPrefs in the registry, outside the
+    // user data folder, shared by every installation, not redirectable by any
+    // launch parameter. Every run exports this key first and imports it back
+    // afterwards, then compares the two. Do not change the key.
+    "key": "HKCU\\Software\\The Fun Pimps\\7 Days To Die",
+    "backupDir": "D:\\7DTD-Bench\\prefs-backup",
+
+    // Optional: single values that have to read exactly this after a restore.
+    // The whole-key comparison happens anyway; this is for settings you refuse
+    // to lose silently.
+    "goldenValues": {}
+  },
+
+  // Registered with "tb versions scan --add", which reads the version out of
+  // each installation's MicrosoftGame.Config instead of trusting the folder name.
+  "versions": [
+    { "id": "3.0.1", "branch": "v3.0.1", "build": "1.301.4.0", "notes": "" },
+    { "id": "3.1.0", "branch": "v3.1.0", "build": "1.310.14.0" }
+  ],
+
+  // Where the mods' own configurations live. Added by "tb mods add <path>".
+  "modConfigs": [
+    "D:\\Mods\\MyMod\\test\\testbench.mod.json"
+  ],
+
+  // Foreign mods a mod under test may need, addressed by key. They are mirrored
+  // into the test installation before every run and their loading is proven in
+  // the log afterwards.
+  "dependencyLibrary": {
+    "quartz": {
+      "folder": "0-Quartz",
+      "source": "C:\\Modlists\\MyList\\mods\\Quartz\\0-Quartz"
+    },
+    "gears": {
+      "folder": "00000-Gears",
+      "source": "C:\\Modlists\\MyList\\mods\\Gears\\00000-Gears",
+      "requires": ["quartz"],
+      "displayName": "Gears"
+    }
+  },
+
+  // The only mods allowed to stay. Everything else is moved aside so a failure
+  // provably belongs to the mod under test. The mod itself and its dependencies
+  // are added automatically.
+  "keepMods": ["0_TFP_Harmony"],
+
+  "timeoutSeconds": 420,
+
+  // The line at which startup counts as finished. Deliberately late: do NOT use
+  // "Started Telnet", which appears after ~3 seconds, long before any XML is
+  // parsed, and would report every run as green having tested nothing.
+  "readyPattern": "INF StartGame done",
+
+  "fatalPattern": "(?i)(Fatal error|System\\.(NullReference|Type|Missing|Argument)\\w*Exception|HarmonyException)",
+  "xmlProblemPattern": "XML loader:|XML patch for .+ did not apply|XML\\.Patch \\(.+Patch type|No element <\\w+> found!",
+
+  // Known noise that appears without any mod. Hits are counted and reported as
+  // "ignored", never silently dropped.
+  "ignorePatterns": ["\\[EOS\\]", "\\[Discord\\]", "Retrieving remote news file"]
+}

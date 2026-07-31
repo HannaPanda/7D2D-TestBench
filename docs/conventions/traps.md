@@ -51,7 +51,7 @@ Quellordner weg ist. Schlägt das fehl, ist es ein Fehler und keine Warnung, den
 der Lauf wäre nicht aussagekräftig.
 
 Der Fixture-Log `smoke_3.0.0_Survival_2026-07-31_21-40-35.log` ist ein Beleg
-dafür, wie das aussieht: dort sind `AdamantBlock` **und** `SevenDashesToDie`
+dafür, wie das aussieht: dort sind `AdamantBlock` **und** `MyMod`
 gleichzeitig geladen. Der alte Bench konnte das nicht sehen, weil er nur fragte,
 ob *sein* Mod geladen ist.
 
@@ -87,7 +87,7 @@ wiederholt zu werden.
 Es sieht wie ein Vanilla-Marker aus und ist keiner. Die echte Zeile gehört dem
 Mod:
 
-    INF [7 Dashes to Die] loaded from ...\Mods\SevenDashesToDie, Harmony patches applied
+    INF [7 Dashes to Die] loaded from ...\Mods\MyMod, Harmony patches applied
 
 Der Default funktioniert für beide bestehenden Mods, weil beide ihre
 Startmeldung zufällig so beenden. Ein Mod, der es anders formuliert, muss
@@ -142,7 +142,7 @@ Mod erscheint.
 
 Der Port ist C#, aber es gibt weiterhin PowerShell im Spiel (`Psd1Importer` ruft
 `Import-PowerShellDataFile`, und die alten Skripte liegen als Referenz noch
-unter `E:\7DTD-Testbench`).
+unter `D:\7DTD-Bench`).
 
 - **Native Exes und `$ErrorActionPreference='Stop'`:** unter PowerShell 5.1 wird
   jede stderr-Zeile eines nativen Programms zu einem `NativeCommandError` und
@@ -200,7 +200,7 @@ Schreibweisen, damit alte Einträge nicht verloren gehen.
 
 ## 16. Der Ordnername ist keine Versionsangabe
 
-`E:\Games\7DTD-3.0.1` heißt nicht, dass dort 3.0.1 liegt. Ein Ordner wird
+`D:\7DTD-Bench\Games\7DTD-3.0.1` heißt nicht, dass dort 3.0.1 liegt. Ein Ordner wird
 umbenannt, kopiert, oder Steam aktualisiert ihn im Bestand, und der Name bleibt
 stehen. Ein Bench, der Versionen nach Ordnernamen führt, meldet dann ruhig weiter
 Ergebnisse für eine Version, die nie gestartet wurde.

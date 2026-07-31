@@ -1,0 +1,12 @@
+<Project>
+
+  <PropertyGroup>
+    <!-- One place for the version, so tb.exe, the GUI and the release ZIP always
+         agree. The release workflow overrides it with the tag it was built from. -->
+    <Version>1.0.0</Version>
+    <Product>7DTD Multiversion Testbench</Product>
+    <Authors>HannaPanda</Authors>
+    <RepositoryUrl>https://github.com/HannaPanda/7D2D-TestBench</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

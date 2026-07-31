@@ -1,10 +1,10 @@
-Mono path[0] = 'E:/Games/7DTD-3.0.0/7DaysToDie_Data/Managed'
-Mono config path = 'E:/Games/7DTD-3.0.0/MonoBleedingEdge/etc'
+Mono path[0] = 'D:/Games/7DTD-3.0.0/7DaysToDie_Data/Managed'
+Mono config path = 'D:/Games/7DTD-3.0.0/MonoBleedingEdge/etc'
 Input System module state changed to: Initialized.
 [PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
-Loading player data from E:/Games/7DTD-3.0.0/7DaysToDie_Data/data.unity3d
+Loading player data from D:/Games/7DTD-3.0.0/7DaysToDie_Data/data.unity3d
 Initialize engine version: 2022.3.62f2 (7670c08855a9)
-[Subsystems] Discovering subsystems at path E:/Games/7DTD-3.0.0/7DaysToDie_Data/UnitySubsystems
+[Subsystems] Discovering subsystems at path D:/Games/7DTD-3.0.0/7DaysToDie_Data/UnitySubsystems
 Forcing GfxDevice: Null
 GfxDevice: creating device client; threaded=0; jobified=0
 NullGfxDevice:
@@ -22,12 +22,12 @@ ERROR: Shader Unlit/Transparent Colored shader is not supported on this GPU (non
 [PhysX] Initialized MultithreadedTaskDispatcher with 16 workers.
 UnloadTime: 0.764800 ms
 2026-07-31T21:40:36 0.017 INF [BACKTRACE] Initialize
-2026-07-31T21:40:36 0.022 INF [BACKTRACE] Root log path: C:\Users\sourc\AppData\Roaming\7DaysToDie\BacktraceLogs
-2026-07-31T21:40:36 0.040 INF [BACKTRACE] Deleted old log: C:\Users\sourc\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-21-34.341.log
-2026-07-31T21:40:36 0.040 INF [BACKTRACE] Using log: C:\Users\sourc\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-23-43.886.log
-2026-07-31T21:40:36 0.040 INF [BACKTRACE] Using log: C:\Users\sourc\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-25-39.510.log
-2026-07-31T21:40:36 0.040 INF [BACKTRACE] Using log: C:\Users\sourc\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-34-32.250.log
-2026-07-31T21:40:36 0.041 INF [BACKTRACE] Player log path: C:\Users\sourc\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-40-36.565.log
+2026-07-31T21:40:36 0.022 INF [BACKTRACE] Root log path: C:\Users\modder\AppData\Roaming\7DaysToDie\BacktraceLogs
+2026-07-31T21:40:36 0.040 INF [BACKTRACE] Deleted old log: C:\Users\modder\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-21-34.341.log
+2026-07-31T21:40:36 0.040 INF [BACKTRACE] Using log: C:\Users\modder\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-23-43.886.log
+2026-07-31T21:40:36 0.040 INF [BACKTRACE] Using log: C:\Users\modder\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-25-39.510.log
+2026-07-31T21:40:36 0.040 INF [BACKTRACE] Using log: C:\Users\modder\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-34-32.250.log
+2026-07-31T21:40:36 0.041 INF [BACKTRACE] Player log path: C:\Users\modder\AppData\Roaming\7DaysToDie\BacktraceLogs\Player-2026-07-31_19-40-36.565.log
 2026-07-31T21:40:36 0.058 INF [BACKTRACE] Initialized
 2026-07-31T21:40:36 0.083 INF Version: V 3.0.0 (b259) Compatibility Version: V 3.0.0, Build: WindowsPlayer 64 Bit
 2026-07-31T21:40:36 0.084 INF System information:
@@ -37,10 +37,10 @@ UnloadTime: 0.764800 ms
 2026-07-31T21:40:36 0.087 INF    GPU: Null Device (128 MB)
 2026-07-31T21:40:36 0.091 INF    Graphics API: NULL 1.0 [1.0] (shader level 3,0)
 2026-07-31T21:40:36 0.092 INF Local UTC offset: 2 hours
-2026-07-31T21:40:36 0.108 INF Command line arguments: E:\Games\7DTD-3.0.0\7DaysToDie.exe -logfile E:\7DTD-Testbench\results\smoke_3.0.0_Survival_2026-07-31_21-40-35.log -quit -batchmode -nographics -configfile=serverconfig.xml -UserDataFolder=E:\Games\_TestUserData\3.0.0 -noeac -dedicated
-2026-07-31T21:40:36 0.110 INF Parsing server configfile: E:/Games/7DTD-3.0.0/7DaysToDie_Data/../serverconfig.xml
+2026-07-31T21:40:36 0.108 INF Command line arguments: D:\Games\7DTD-3.0.0\7DaysToDie.exe -logfile D:\7DTD-Bench\results\smoke_3.0.0_Survival_2026-07-31_21-40-35.log -quit -batchmode -nographics -configfile=serverconfig.xml -UserDataFolder=D:\Games\_TestUserData\3.0.0 -noeac -dedicated
+2026-07-31T21:40:36 0.110 INF Parsing server configfile: D:/Games/7DTD-3.0.0/7DaysToDie_Data/../serverconfig.xml
 2026-07-31T21:40:36 0.153 INF Parsing server configfile successfully completed
-2026-07-31T21:40:36 0.155 INF Overriding default user data path to E:\Games\_TestUserData\3.0.0
+2026-07-31T21:40:36 0.155 INF Overriding default user data path to D:\Games\_TestUserData\3.0.0
 2026-07-31T21:40:36 0.162 INF [Platform] Init
 2026-07-31T21:40:36 0.209 INF [Platform] Using native platform: Steam
 2026-07-31T21:40:36 0.210 INF [Platform] Using cross platform: EOS
@@ -59,7 +59,7 @@ UnloadTime: 0.764800 ms
 2026-07-31T21:40:36 0.387 INF [Platform] Initializing PSN
 2026-07-31T21:40:36 0.387 INF [Platform] Initializing LAN
 2026-07-31T21:40:36 0.431 INF [SaveDataUtils] InitStatic Begin
-2026-07-31T21:40:36 0.433 INF [SaveDataUtils] UserGameDataDir: E:\Games\_TestUserData\3.0.0
+2026-07-31T21:40:36 0.433 INF [SaveDataUtils] UserGameDataDir: D:\Games\_TestUserData\3.0.0
 2026-07-31T21:40:36 0.436 INF [SaveDataUtils] SdPlayerPrefs -> Unity
 2026-07-31T21:40:36 0.436 INF [SaveDataUtils] InitStatic Complete
 2026-07-31T21:40:37 0.487 INF Last played version: V 3.0.0
@@ -139,60 +139,60 @@ ERROR: Shader Game/Entity Tint Mask shader is not supported on this GPU (none of
 WARNING: Shader Unsupported: 'Game/Entity Tint Mask' - All subshaders removed
 WARNING: Shader Did you use #pragma only_renderers and omit this platform?
 WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
-2026-07-31T21:40:37 1.397 INF [MODS] Start loading from: 'E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods'
+2026-07-31T21:40:37 1.397 INF [MODS] Start loading from: 'D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods'
 2026-07-31T21:40:37 1.400 INF [MODS]   Trying to load from folder: '0_TFP_Harmony'
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0C4D010.dll
-2026-07-31T21:40:37 1.407 INF [MODS]     Loaded assembly 0Harmony (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\0Harmony.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0C93E20.dll
-2026-07-31T21:40:37 1.409 INF [MODS]     Loaded assembly Mono.Cecil (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D0C660.dll
-2026-07-31T21:40:37 1.412 INF [MODS]     Loaded assembly Mono.Cecil.Mdb (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.Mdb.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D16E70.dll
-2026-07-31T21:40:37 1.414 INF [MODS]     Loaded assembly Mono.Cecil.Pdb (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.Pdb.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D2CC80.dll
-2026-07-31T21:40:37 1.416 INF [MODS]     Loaded assembly Mono.Cecil.Rocks (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.Rocks.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D34090.dll
-2026-07-31T21:40:37 1.421 INF [MODS]     Loaded assembly MonoMod.Backports (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Backports.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D50CA0.dll
-2026-07-31T21:40:37 1.423 INF [MODS]     Loaded assembly MonoMod.Core (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Core.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D9D520.dll
-2026-07-31T21:40:37 1.430 INF [MODS]     Loaded assembly MonoMod.Iced (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Iced.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D8A100.dll
-2026-07-31T21:40:37 1.432 INF [MODS]     Loaded assembly MonoMod.ILHelpers (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.ILHelpers.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0E3DEE0.dll
-2026-07-31T21:40:37 1.435 INF [MODS]     Loaded assembly MonoMod.RuntimeDetour (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.RuntimeDetour.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0E4FCF0.dll
-2026-07-31T21:40:37 1.437 INF [MODS]     Loaded assembly MonoMod.Utils (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Utils.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EA2B00.dll
-2026-07-31T21:40:37 1.439 INF [MODS]     Loaded assembly System.ValueTuple (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\System.ValueTuple.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0E39530.dll
-2026-07-31T21:40:37 1.442 INF [MODS]     Loaded assembly TfpHarmony (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\TfpHarmony.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0C4D010.dll
+2026-07-31T21:40:37 1.407 INF [MODS]     Loaded assembly 0Harmony (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\0Harmony.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0C93E20.dll
+2026-07-31T21:40:37 1.409 INF [MODS]     Loaded assembly Mono.Cecil (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D0C660.dll
+2026-07-31T21:40:37 1.412 INF [MODS]     Loaded assembly Mono.Cecil.Mdb (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.Mdb.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D16E70.dll
+2026-07-31T21:40:37 1.414 INF [MODS]     Loaded assembly Mono.Cecil.Pdb (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.Pdb.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D2CC80.dll
+2026-07-31T21:40:37 1.416 INF [MODS]     Loaded assembly Mono.Cecil.Rocks (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\Mono.Cecil.Rocks.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D34090.dll
+2026-07-31T21:40:37 1.421 INF [MODS]     Loaded assembly MonoMod.Backports (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Backports.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D50CA0.dll
+2026-07-31T21:40:37 1.423 INF [MODS]     Loaded assembly MonoMod.Core (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Core.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D9D520.dll
+2026-07-31T21:40:37 1.430 INF [MODS]     Loaded assembly MonoMod.Iced (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Iced.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0D8A100.dll
+2026-07-31T21:40:37 1.432 INF [MODS]     Loaded assembly MonoMod.ILHelpers (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.ILHelpers.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0E3DEE0.dll
+2026-07-31T21:40:37 1.435 INF [MODS]     Loaded assembly MonoMod.RuntimeDetour (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.RuntimeDetour.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0E4FCF0.dll
+2026-07-31T21:40:37 1.437 INF [MODS]     Loaded assembly MonoMod.Utils (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\MonoMod.Utils.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EA2B00.dll
+2026-07-31T21:40:37 1.439 INF [MODS]     Loaded assembly System.ValueTuple (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\System.ValueTuple.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0E39530.dll
+2026-07-31T21:40:37 1.442 INF [MODS]     Loaded assembly TfpHarmony (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0_TFP_Harmony\TfpHarmony.dll)
 2026-07-31T21:40:37 1.443 INF [MODS]     Loaded Mod: TFP_Harmony (1.1.0.4)
 2026-07-31T21:40:37 1.444 INF [MODS]   Trying to load from folder: '00000-Gears'
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EA7D20.dll
-2026-07-31T21:40:38 1.594 INF [MODS]     Loaded assembly Gears (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\00000-Gears\Gears.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EC0330.dll
-2026-07-31T21:40:38 1.625 INF [MODS]     Loaded assembly GearsAPI (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\00000-Gears\GearsAPI.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EA7D20.dll
+2026-07-31T21:40:38 1.594 INF [MODS]     Loaded assembly Gears (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\00000-Gears\Gears.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EC0330.dll
+2026-07-31T21:40:38 1.625 INF [MODS]     Loaded assembly GearsAPI (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\00000-Gears\GearsAPI.dll)
 2026-07-31T21:40:38 1.627 INF [MODS]     Loaded Mod: Gears (7.0.1)
 2026-07-31T21:40:38 1.628 INF [MODS]   Trying to load from folder: '0-Quartz'
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EE3D70.dll
-2026-07-31T21:40:38 1.656 INF [MODS]     Loaded assembly GearsAPI (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0-Quartz\GearsAPI.dll)
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0F2E560.dll
-2026-07-31T21:40:38 1.779 INF [MODS]     Loaded assembly Quartz (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0-Quartz\Quartz.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EE3D70.dll
+2026-07-31T21:40:38 1.656 INF [MODS]     Loaded assembly GearsAPI (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0-Quartz\GearsAPI.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0F2E560.dll
+2026-07-31T21:40:38 1.779 INF [MODS]     Loaded assembly Quartz (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\0-Quartz\Quartz.dll)
 2026-07-31T21:40:38 1.780 INF [MODS]     Loaded Mod: Quartz (8.0.1)
 2026-07-31T21:40:38 1.781 INF [MODS]   Trying to load from folder: 'AdamantBlock'
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EE9180.dll
-2026-07-31T21:40:38 1.784 INF [MODS]     Loaded assembly AdamantBlock (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\AdamantBlock\AdamantBlock.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0EE9180.dll
+2026-07-31T21:40:38 1.784 INF [MODS]     Loaded assembly AdamantBlock (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\AdamantBlock\AdamantBlock.dll)
 2026-07-31T21:40:38 1.785 INF [MODS]     Loaded Mod: AdamantBlock (1.2.2.0)
 2026-07-31T21:40:38 1.786 INF [MODS]   Trying to load from folder: 'SevenDashesToDie'
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0F145E0.dll
-2026-07-31T21:40:38 1.887 INF [MODS]     Loaded assembly SevenDashesToDie (in E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\SevenDashesToDie\SevenDashesToDie.dll)
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-0000029FD0F145E0.dll
+2026-07-31T21:40:38 1.887 INF [MODS]     Loaded assembly SevenDashesToDie (in D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\SevenDashesToDie\SevenDashesToDie.dll)
 2026-07-31T21:40:38 1.888 INF [MODS]     Loaded Mod: SevenDashesToDie (1.1.0.0)
 2026-07-31T21:40:38 1.890 INF [MODS] Initializing mod code
 2026-07-31T21:40:38 1.891 INF [MODS]   Initializing mod TFP_Harmony
 2026-07-31T21:40:38 1.914 INF [MODS]     Found ModAPI in assembly TfpHarmony, creating instance
 2026-07-31T21:40:38 1.916 INF [MODS]       [Harmony] Init done
-Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-000002A09D317B30.dll
+Fallback handler could not load library D:/Games/7DTD-3.0.0/7DaysToDie_Data/MonoBleedingEdge/data-000002A09D317B30.dll
 2026-07-31T21:40:38 2.261 INF [MODS]     Initialized code in mod 'TFP_Harmony' in assembly TfpHarmony
 2026-07-31T21:40:38 2.262 INF [MODS]   Initializing mod Gears
 2026-07-31T21:40:38 2.263 INF [MODS]     Found ModAPI in assembly Gears, creating instance
@@ -217,14 +217,14 @@ Fallback handler could not load library E:/Games/7DTD-3.0.0/7DaysToDie_Data/Mono
 2026-07-31T21:40:39 2.595 INF [MODS]     Initialized code in mod 'AdamantBlock' in assembly AdamantBlock
 2026-07-31T21:40:39 2.596 INF [MODS]   Initializing mod SevenDashesToDie
 2026-07-31T21:40:39 2.596 INF [MODS]     Found ModAPI in assembly SevenDashesToDie, creating instance
-2026-07-31T21:40:39 2.668 INF [7 Dashes to Die] loaded from E:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\SevenDashesToDie, Harmony patches applied
+2026-07-31T21:40:39 2.668 INF [7 Dashes to Die] loaded from D:/Games/7DTD-3.0.0/7DaysToDie_Data/../Mods\SevenDashesToDie, Harmony patches applied
 2026-07-31T21:40:39 2.668 INF [MODS]     Initialized code in mod 'SevenDashesToDie' in assembly SevenDashesToDie
 2026-07-31T21:40:39 2.669 INF [MODS] Loading done
 2026-07-31T21:40:39 2.670 INF [MODS] Loading localization from mod: Gears
 2026-07-31T21:40:39 2.686 INF [MODS] Loading localization from mod: Quartz
 2026-07-31T21:40:39 2.702 INF [MODS] Loading localization from mod: AdamantBlock
 2026-07-31T21:40:39 2.706 INF [MODS] Loading localization from mod: SevenDashesToDie
-2026-07-31T21:40:39 2.729 INF Loading permissions file at 'E:\Games\_TestUserData\3.0.0\Saves/serveradmin.xml'
+2026-07-31T21:40:39 2.729 INF Loading permissions file at 'D:\Games\_TestUserData\3.0.0\Saves/serveradmin.xml'
 2026-07-31T21:40:39 2.743 INF Loading permissions file done.
 2026-07-31T21:40:39 2.764 INF Creating TransformDebug GameObject
 ERROR: Shader Legacy Shaders/Particles/Additive shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
@@ -501,7 +501,7 @@ WARNING: Shader Unsupported: 'Game Particles/barrelLiquidShader_packed' - All su
 WARNING: Shader Did you use #pragma only_renderers and omit this platform?
 WARNING: Shader If subshaders removal was intentional, you may have forgotten turning Fallback off?
 2026-07-31T21:40:40 3.478 INF Reloading serveradmin.xml
-2026-07-31T21:40:40 3.478 INF Loading permissions file at 'E:\Games\_TestUserData\3.0.0\Saves/serveradmin.xml'
+2026-07-31T21:40:40 3.478 INF Loading permissions file at 'D:\Games\_TestUserData\3.0.0\Saves/serveradmin.xml'
 2026-07-31T21:40:40 3.479 INF Permissions file unchanged, skipping reloading
 ERROR: Shader Hidden/Game/ChunkTransparent shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
 2026-07-31T21:40:40 3.542 INF Loaded (local): events in 0.01
@@ -532,7 +532,7 @@ ERROR: Shader Hidden/Game/ChunkTransparent shader is not supported on this GPU (
 2026-07-31T21:40:43 7.398 INF [PermissionsManager] ResolvePermissions(_perms: [All], _canPrompt: False)
 2026-07-31T21:40:43 7.399 INF [PermissionsManager] ResolvePermissions(_perms: [All], _canPrompt: False) Fetching Title Storage Overrides...
 2026-07-31T21:40:43 7.401 INF [EOS] Created RFS Request: PlatformOverrides
-2026-07-31T21:40:44 7.528 WRN [EOS] [LogEOSTitleStorage - Warning] Deleting local invalid cache file. CacheFilename=[E:/Games/_TestUserData/3.0.0/titlestorage/8a44365d5ccb43328b4df2f8ca199e43/__cache_registry_lock]
+2026-07-31T21:40:44 7.528 WRN [EOS] [LogEOSTitleStorage - Warning] Deleting local invalid cache file. CacheFilename=[D:/Games/_TestUserData/3.0.0/titlestorage/8a44365d5ccb43328b4df2f8ca199e43/__cache_registry_lock]
 2026-07-31T21:40:44 7.531 INF [EOS] Read (PlatformOverrides) completed: Success, received 532 bytes
 2026-07-31T21:40:44 7.533 INF [TitleStorageOverridesManager] Successfully retrieved overrides.
 2026-07-31T21:40:44 7.534 INF [PermissionsManager] ResolvePermissions(_perms: [All], _canPrompt: False) Fetched Title Storage Overrides!
@@ -1279,7 +1279,7 @@ Texture with ID 2696 and with size 6144x6144 was too large for graphics device m
 Texture with ID 2697 and with size 6144x6144 was too large for graphics device maximum supported texture size (4096x4096). Falling back to a dummy texture. Generate mip maps to provide lower size fallback.
 2026-07-31T21:41:04 28.437 INF GenWorldFromRaw shader control textures took 580ms
 2026-07-31T21:41:05 28.652 INF Computed 506 chunk groups containing a total of 9722 chunks. Largest group contains 435 chunks.
-2026-07-31T21:41:05 28.655 INF Started thread SaveChunks E:\Games\_TestUserData\3.0.0\Saves\Navezgane\MyGame\Region
+2026-07-31T21:41:05 28.655 INF Started thread SaveChunks D:\Games\_TestUserData\3.0.0\Saves\Navezgane\MyGame\Region
 2026-07-31T21:41:05 28.657 INF GenWorldFromRaw misc took 218ms
 2026-07-31T21:41:05 29.123 INF GenWorldFromRaw splats took 465ms
 Unloading 0 Unused Serialized files (Serialized files now loaded: 55)
@@ -1328,7 +1328,7 @@ Total: 488.375100 ms (FindLiveObjects: 9.867100 ms CreateObjectMapping: 13.22230
 2026-07-31T21:41:08 32.030 INF Max View Distance: 1000
 2026-07-31T21:41:08 32.031 INF Regen all on new world: False
 2026-07-31T21:41:08 32.034 INF Dymesh: Prepping dynamic mesh. Resend Default: True
-2026-07-31T21:41:08 32.034 INF Dymesh: Mesh location: E:\Games\_TestUserData\3.0.0\Saves/Navezgane/MyGame/DynamicMeshes/
+2026-07-31T21:41:08 32.034 INF Dymesh: Mesh location: D:\Games\_TestUserData\3.0.0\Saves/Navezgane/MyGame/DynamicMeshes/
 2026-07-31T21:41:08 32.087 INF [Web] Webserver not started, WebDashboardEnabled set to false
 2026-07-31T21:41:08 32.088 INF StartGame done
 2026-07-31T21:41:08 32.090 INF [EOS] Server registered, session: ffbb05bdeb784f8893f463d42012a5ba, 56 attributes

@@ -5,14 +5,12 @@ Einstieg für KI-Agenten in dieses Repo. Zuerst lesen.
 ## Was das ist
 
 Ein Werkzeug, das einen 7-Days-to-Die-Mod gegen mehrere Spielversionen testet,
-ohne die Live-Modlist (MO2 "Smorgasbord") oder den Spielstand anzufassen. Ein Kern
+ohne die gespielte Installation oder den Spielstand anzufassen. Ein Kern
 (`Testbench.Core`), zwei Oberflächen: `tb.exe` für die Kommandozeile und Agenten,
-ein WPF-Fenster für den Menschen.
+ein WPF-Fenster für den Menschen, dreizehn Sprachen.
 
-Es ersetzt drei PowerShell-Skripte, die weiterhin unverändert unter
-`E:\7DTD-Testbench` liegen (`Invoke-SmokeTest.ps1`, `Invoke-TestMatrix.ps1`,
-`Start-Gui.ps1`). Sie sind die Referenz für den Paritätsnachweis und werden erst
-entfernt, wenn dieses Tool sie im Alltag ersetzt hat.
+Es ersetzt drei PowerShell-Skripte, die unter [`legacy/`](legacy/) liegen. Sie sind
+die Referenz für den Paritätsnachweis und werden nicht mehr gepflegt.
 
 ## Docs-Map
 
@@ -24,6 +22,11 @@ entfernt, wenn dieses Tool sie im Alltag ersetzt hat.
   Sechzehn Fallen, die alle bezahlt worden sind. Vor jeder Änderung an Deploy,
   Prefs, Launcher oder Analyzer den passenden Absatz lesen.
 - [`docs/cli.md`](docs/cli.md) - Verben, Optionen, Exit-Codes, `--json`.
+- [`docs/i18n.md`](docs/i18n.md) - wie Texte übersetzt werden, und die Regel, dass
+  jeder neue Text in **allen** ausgelieferten Katalogen landet. Die Tests
+  erzwingen das.
+- [`examples/`](examples/) - kommentierte `testbench.json` und
+  `testbench.mod.json` mit generischen Pfaden. Beim Schema-Ändern mitpflegen.
 
 Docs werden mitgepflegt: jede Änderung an Verhalten, Architektur oder
 Konfiguration aktualisiert die passende Datei im selben Commit.
@@ -39,13 +42,26 @@ Konfiguration aktualisiert die passende Datei im selben Commit.
 
 `net10.0-windows` überall: Registry, 7DTD und WPF sind Windows-gebunden.
 
-## Umgebung (dieser Rechner)
+## Umgebung
 
-- Testinstallationen: `E:\Games\7DTD-<version>` (3.0.0, 3.0.1, 3.1.0)
-- Bench-Daten: `E:\7DTD-Testbench` (`testbench.json`, `bin\tb.exe`, `results\`, `state\`)
-- Getestete Mods: `C:\Users\sourc\7D2D-Adamant`, `C:\Users\sourc\7D2D-7DashesToDie`
-- Fremdmods: `C:\Modlists\Smorgasbord\mods\...` (nur lesend, zum Spiegeln)
-- GamePrefs-Sicherungen: `E:\Backup\7DTD-Prefs`
+Wo auf einem Rechner was liegt, steht in dessen `testbench.json` und wird von
+`tb doctor --json` vollständig ausgegeben. Nichts im Code, in den Tests oder in
+dieser Doku darf einen Laufwerksbuchstaben, einen Benutzernamen oder einen
+bestimmten Mod voraussetzen: das Werkzeug ist zur Veröffentlichung gedacht.
+
+Die Struktur, die `tb init` anlegt:
+
+```
+<bench>\               tb.exe, Testbench.Gui.exe, lang\, testbench.json
+<bench>\Games\         eine Testinstallation je Version: 7DTD-<version>
+<bench>\UserData\      Spielstände und Einstellungen der Läufe
+<bench>\results\       Logs und Markdown-Reports
+<bench>\state\         Run-Store, Laufsperre, Fensterzustand
+```
+
+- Die **gespielte** Installation gehört nicht dazu. `SteamLocator` findet sie, und
+  `TestRunner` wie `Doctor` **verweigern** eine Version, die dort liegt: ein Lauf
+  würde die Modlist auseinandernehmen.
 - Für Fragen zur 7DTD-Engine oder -API ist die **`7d2d-modding`-Skill** das
   richtige Werkzeug: sie befragt die echte `Assembly-CSharp.dll`. Nie aus dem
   Gedächtnis antworten.
@@ -107,15 +123,11 @@ Drei Entscheidungen, die man kennen muss:
 
 ## Stand
 
-Etappe 1 fertig und belegt: Core, `tb.exe`, 24 Tests grün, Paritätslauf gegen
-`Invoke-SmokeTest.ps1` auf 3.0.1 mit identischem Status und identischen Zählern
-(OK, ERR 0, EXC 0, XML 0, ignoriert 11, beide Abhängigkeiten im Log nachgewiesen).
+Belegt, nicht behauptet: Paritätslauf gegen `legacy/Invoke-SmokeTest.ps1` auf
+derselben Installation mit identischem Status und identischen Zählern, und vier
+echte Logs als Fixtures, deren Erwartungswerte aus der alten PowerShell-Logik
+gemessen sind. Die Testsuite ist grün und deckt Analyzer, Versionserkennung und
+die Vollständigkeit aller Sprachkataloge ab.
 
-Etappe 2 fertig: WPF-Fenster auf demselben Core, gestartet und gerendert. Die
-Sichtprüfung des Fensters selbst steht noch aus, was passend ist: ob etwas richtig
-aussieht, kann hier genauso wenig ein Skript beantworten.
-
-`7 Dashes to Die` 1.1.0 ist headless-clean auf 3.0.0, 3.0.1 und 3.1.0, hat aber
-**keinen GUI-Lauf**. Beide neuen Features sind Menü- und Eingabeverhalten, das
-`-nographics` überhaupt nicht ausführt. Der Report weist das korrekt als "kein
-GUI-Lauf" aus und schlägt keine `TESTED_VERSIONS`-Zeile vor.
+Offen und bewusst offen: ob das Fenster gut *aussieht*, kann hier so wenig ein
+Test beantworten wie eine Sichtprüfung im Spiel.

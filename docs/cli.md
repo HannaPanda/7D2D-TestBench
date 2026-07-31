@@ -1,7 +1,8 @@
 # tb - Kommandozeile
 
-`tb.exe` liegt nach `dotnet publish` unter `E:\7DTD-Testbench\bin\tb.exe` und
-findet seine Konfiguration eine Ebene darüber.
+`tb.exe` und `testbench.json` liegen im selben Ordner. Gesucht wird die
+Konfiguration neben der Exe und eine Ebene darüber, damit auch die Aufteilung
+`<bench>\bin\tb.exe` neben `<bench>\testbench.json` funktioniert.
 
 ## Exit-Codes
 
@@ -36,11 +37,15 @@ als bestätigt gelten.
 ## Einrichten
 
 ```bash
-tb init --bench-root E:\7DTD-Testbench
+tb init
 ```
 
+Legt `testbench.json` und die Ordner darunter an, alles abgeleitet vom Ort der
+Exe. `--bench-root <pfad>` setzt einen anderen Ort, `--game-root <pfad>` weist auf
+schon vorhandene Installationen, `--lang <sprache>` legt die Sprache fest.
+
 ```bash
-tb import --psd1 E:\7DTD-Testbench\Testbench.psd1 --mod-out C:\Users\sourc\7D2D-Adamant\test\testbench.mod.json
+tb import --psd1 D:\7DTD-Bench\Testbench.psd1 --mod-out D:\Mods\MyMod\test\testbench.mod.json
 ```
 
 Trennt eine alte `.psd1` in Maschinen- und Mod-Teil, schreibt den Mod-Teil neben
@@ -49,7 +54,7 @@ Abweichungen bei einer schon bekannten Abhängigkeit werden gemeldet und **nicht
 übernommen.
 
 ```bash
-tb import --gui-verified E:\7DTD-Testbench\gui-verified.json --mod adamant
+tb import --gui-verified D:\7DTD-Bench\gui-verified.json --mod mymod
 ```
 
 ```bash
@@ -95,7 +100,7 @@ widerspricht, wird **nicht** eingetragen: das ist der Fall, in dem ein Report
 hinterher eine Version behauptet, die nie getestet wurde. Mit `--force` trotzdem.
 
 ```bash
-tb versions add --path "E:\Games\7DTD-3.2.0"
+tb versions add --path "D:\7DTD-Bench\Games\7DTD-3.2.0"
 ```
 
 Liest die Version aus der Installation. Mit `tb versions add 3.2.0 --path <ordner>`
@@ -116,24 +121,24 @@ tb mods
 ```
 
 ```bash
-tb profiles --mod seven
+tb profiles --mod mymod
 ```
 
 ## Testen
 
 ```bash
-tb run --mod seven --profile matrix
+tb run --mod mymod --profile matrix
 ```
 
 ```bash
-tb run --mod seven --version 3.0.1 --stage headless
+tb run --mod mymod --version 3.0.1 --stage headless
 ```
 
 Optionen von `run`:
 
 | Option | Wirkung |
 |---|---|
-| `--mod <id>` | eindeutiges Fragment genügt (`seven`, `adamant`) |
+| `--mod <id>` | eindeutiges Fragment der modId genügt |
 | `--profile <name>` | benannte Kombination; explizite Argumente gewinnen |
 | `--version <v>` | mehrfach oder kommagetrennt; ohne Angabe alle bekannten |
 | `--variant <name>` | ohne Angabe die erste Variante des Mods |
@@ -152,14 +157,14 @@ tb status --pending
 ```
 
 ```bash
-tb verify --run 20260731-222549_sevendashestodie_3.0.1_gui --visual ok --note "Controller-Zeile da, Doppeltipp dasht"
+tb verify --run 20260731-222549_mymod_3.0.1_gui --visual ok --note "Controller-Zeile da, Doppeltipp dasht"
 ```
 
 Nur für GUI-Läufe. Ein Headless-Lauf führt nichts Grafisches aus, da gibt es
 nichts, was ein Auge bestätigt haben könnte.
 
 ```bash
-tb report --mod seven --write
+tb report --mod mymod --write
 ```
 
 Zeigt die Matrix und die `TESTED_VERSIONS`-Zeile, mit `--write` zusätzlich als
@@ -174,22 +179,39 @@ tb log --run <runId>
 Ohne weitere Angabe die auffälligen Zeilen, mit `--lines <n>` die letzten n
 Zeilen des Logs.
 
+## Sprache
+
+```bash
+tb lang
+```
+
+Zeigt jede vorhandene Sprache, welche aktiv ist, welche die Systemsprache wäre und
+wie viele Schlüssel einer Übersetzung fehlen.
+
+```bash
+tb lang german
+```
+
+Setzt sie und schreibt sie in die `testbench.json`. `tb lang <sprache> --check`
+nennt jeden fehlenden Schlüssel. `--lang <sprache>` gilt nur für einen Aufruf.
+Hintergrund in [i18n.md](i18n.md).
+
 ## Ablauf für einen Agenten
 
 ```bash
 tb doctor --json
 ```
 ```bash
-tb run --mod seven --profile matrix --json
+tb run --mod mymod --profile matrix --json
 ```
 ```bash
-tb run --mod seven --version 3.1.0 --stage gui --visual defer --json
+tb run --mod mymod --version 3.1.0 --stage gui --visual defer --json
 ```
 ```bash
 tb status --pending --json
 ```
 ```bash
-tb report --mod seven --json
+tb report --mod mymod --json
 ```
 
 Der Agent kann alles außer der Sichtprüfung. Die bleibt offen, bis ein Mensch

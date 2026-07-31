@@ -30,7 +30,21 @@ public static class Program
         if (verb is null || verb is "help" or "-h" or "--help")
         {
             if (!json) Console.WriteLine(Help());
-            return output.Finish("help", ExitCodes.Ok, new { usage = Help() });
+            return output.Finish("help", ExitCodes.Ok, new { usage = Help(), version = Version() });
+        }
+
+        if (verb is "version" or "-v" or "--version")
+        {
+            // Worth its own verb: the first question about any bug report is which
+            // build produced it.
+            output.Info(Loc.T("cli.version.line", Version(), Loc.Current));
+            return output.Finish("version", ExitCodes.Ok, new
+            {
+                version = Version(),
+                language = Loc.Current,
+                langDir = Loc.LangDir,
+                exeDir = AppContext.BaseDirectory,
+            });
         }
 
         try
@@ -95,6 +109,15 @@ public static class Program
         Loc.Use("auto");
     }
 
+    /// <summary>Informational version, so a bug report can name a build.</summary>
+    public static string Version() =>
+        typeof(Program).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?.InformationalVersion.Split('+')[0]
+        ?? typeof(Program).Assembly.GetName().Version?.ToString()
+        ?? "unknown";
+
     private static int Unknown(Output output, string verb)
     {
         output.Bad(Loc.T("cli.unknownCommand", verb));
@@ -114,7 +137,8 @@ public static class Program
             Loc.T("cli.help.title"),
             "",
             Loc.T("cli.help.section.setup"),
-            "  tb init [--game-root <path>] [--bench-root <path>]",
+            "  tb version                                       " + Loc.T("cli.help.version"),
+            "  tb init [--game-root <path>] [--bench-root <path>] [--lang <language>]",
             "  tb import --psd1 <file> [--mod-out <file>]        " + Loc.T("cli.help.import.psd1"),
             "  tb import --gui-verified <file> --mod <modId>     " + Loc.T("cli.help.import.guiVerified"),
             "  tb doctor                                        " + Loc.T("cli.help.doctor"),

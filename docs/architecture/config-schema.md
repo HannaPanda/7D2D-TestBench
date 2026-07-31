@@ -4,7 +4,7 @@ Drei Ebenen, damit nichts doppelt gepflegt werden muss.
 
 | Ebene | Datei | Gehört wem |
 |---|---|---|
-| Maschine | `E:\7DTD-Testbench\testbench.json` | diesem Rechner |
+| Maschine | `D:\7DTD-Bench\testbench.json` | diesem Rechner |
 | Mod | `<repo>\test\testbench.mod.json` | dem Mod, liegt in seinem Repo |
 | Profil | im Mod-JSON unter `profiles` | einer benannten Testkombination |
 
@@ -21,42 +21,37 @@ In dieser Reihenfolge:
 3. `<exe-ordner>\testbench.json`
 4. `<exe-ordner>\..\testbench.json`
 
-Punkt 4 ist der Normalfall: `tb.exe` liegt in `E:\7DTD-Testbench\bin`, die Config
+Punkt 4 ist der Normalfall: `tb.exe` liegt in `D:\7DTD-Bench\bin`, die Config
 eine Ebene darüber.
 
 ## testbench.json
 
 ```jsonc
 {
-  "gameRoot": "E:\\Games",                  // Installationen: <gameRoot>\7DTD-<version>
-  "userDataRoot": "E:\\Games\\_TestUserData", // <root>\<version> bzw. <version>-gui
-  "resultRoot": "E:\\7DTD-Testbench\\results",
-  "stateRoot": "E:\\7DTD-Testbench\\state",  // Run-Store und Lockfile
+  "language": "auto",                        // "german", "english", ... oder Systemsprache
+  "gameRoot": "D:\\7DTD-Bench\\Games",                  // Installationen: <gameRoot>\7DTD-<version>
+  "userDataRoot": "D:\\7DTD-Bench\\UserData", // <root>\<version> bzw. <version>-gui
+  "resultRoot": "D:\\7DTD-Bench\\results",
+  "stateRoot": "D:\\7DTD-Bench\\state",  // Run-Store und Lockfile
 
   "prefs": {
     "key": "HKCU\\Software\\The Fun Pimps\\7 Days To Die",
-    "backupDir": "E:\\Backup\\7DTD-Prefs",
-    "goldenReg": "E:\\Backup\\7DTD-Prefs\\prefs_golden.reg",
-    "goldenValues": {                        // nach dem Restore geprüft
-      "DynamicMeshDistance": 1000,
-      "DynamicMeshUseImposters": 1,
-      "OptionsGfxTexQuality": 1,
-      "OptionsGfxViewDistance": 5
-    }
+    "backupDir": "D:\\7DTD-Bench\\prefs-backup",
+    "goldenValues": {}                       // optional, siehe unten
   },
 
   "versions": [                              // tb versions scan --add schreibt das
     { "id": "3.0.1", "branch": "v3.0.1", "build": "1.301.4.0", "notes": "Live-Version" },
-    { "id": "3.1.0", "path": "E:\\Games\\7DTD-3.1.0", "build": "1.310.14.0" }
+    { "id": "3.1.0", "path": "D:\\7DTD-Bench\\Games\\7DTD-3.1.0", "build": "1.310.14.0" }
   ],
 
   "modConfigs": [                            // wo die Mod-Configs liegen
-    "C:\\Users\\sourc\\7D2D-7DashesToDie\\test\\testbench.mod.json"
+    "D:\\Mods\\MyMod\\test\\testbench.mod.json"
   ],
 
   "dependencyLibrary": {
-    "quartz": { "folder": "0-Quartz",    "source": "C:\\Modlists\\..." },
-    "gears":  { "folder": "00000-Gears", "source": "C:\\Modlists\\...",
+    "quartz": { "folder": "0-Quartz",    "source": "C:\\Modlists\\MyList\\mods\\Quartz\\0-Quartz" },
+    "gears":  { "folder": "00000-Gears", "source": "C:\\Modlists\\MyList\\mods\\Gears\\00000-Gears",
                 "requires": ["quartz"], "displayName": "Gears" }
   },
 
@@ -92,22 +87,30 @@ eine Ebene darüber.
 - **`ignorePatterns`** bewusst eng halten: hier gehört nur hinein, was nachweislich
   auch ohne Mod erscheint. Treffer werden gezählt und ausgewiesen, nicht
   verschluckt.
-- **`prefs.goldenValues`** sind die vier Werte, die das RAM-Thrashing behoben
-  haben. Sie werden nach jedem Restore geprüft.
+- **`prefs.goldenValues`** ist optional und normalerweise leer. Jeder Restore wird
+  ohnehin geprüft, indem der ganze Registry-Key erneut exportiert und gegen die
+  Sicherung verglichen wird (`PrefsGuard.RoundTrip`); das funktioniert für jede
+  Einstellung und ohne Konfiguration. Einträge hier bedeuten zusätzlich "und dieser
+  Wert muss danach genau das ergeben", für Einstellungen, die man auf keinen Fall
+  verlieren will.
+- **`language`** ist ein Katalogname aus `lang\` (`english`, `german`,
+  `schinese`, ...) oder `"auto"` für die Systemsprache mit Englisch als Rückfall.
+  Siehe [i18n.md](../i18n.md).
 
 Kommentare und nachgestellte Kommas sind in diesen Dateien erlaubt (der Parser
 überliest sie), damit man von Hand hineinschreiben kann, warum etwas so steht.
+Vollständige, kommentierte Beispiele liegen in [`examples/`](../../examples/).
 
 ## testbench.mod.json
 
 ```jsonc
 {
-  "modId": "sevendashestodie",     // aus ModInfo.xml <Name>, kleingeschrieben
-  "displayName": "7 Dashes to Die",// aus ModInfo.xml <DisplayName>
-  "repo": "C:\\Users\\sourc\\7D2D-7DashesToDie",
+  "modId": "mymod",     // aus ModInfo.xml <Name>, kleingeschrieben
+  "displayName": "My Mod",        // aus ModInfo.xml <DisplayName>
+  "repo": "D:\\Mods\\MyMod",
 
   "variants": [
-    { "name": "Default", "folder": "SevenDashesToDie" }
+    { "name": "Default", "folder": "MyMod" }
   ],
 
   "dependencies": ["quartz", "gears"],   // Schlüssel aus dependencyLibrary
@@ -119,10 +122,10 @@ Kommentare und nachgestellte Kommas sind in diesen Dateien erlaubt (der Parser
   },
 
   "stage2": {
-    "logFilter": "7 Dashes to Die|HarmonyException| EXC | ERR ",
-    "evidencePatterns": ["dash key registered", "dash added to the controller bindings list"],
-    "evidenceLabel": "Dash-Taste und Controller-Zeile im Log belegt",
-    "visualQuestion": "Controller-Zeile unter Options > Controller > On Foot da ...?"
+    "logFilter": "My Mod|HarmonyException| EXC | ERR ",
+    "evidencePatterns": ["MyMod: registered"],
+    "evidenceLabel": "Registrierung im Log belegt",
+    "visualQuestion": "Sah die Blocktextur richtig aus und ging die Taste?"
   },
 
   "profiles": [
@@ -137,7 +140,7 @@ Kommentare und nachgestellte Kommas sind in diesen Dateien erlaubt (der Parser
 ### Felder mit Fallen
 
 - **`modId`** kommt aus `ModInfo.xml` `<Name>`, weil genau dieser Name im Log
-  steht. Auf der Kommandozeile genügt ein eindeutiges Fragment (`--mod seven`).
+  steht. Auf der Kommandozeile genügt ein eindeutiges Fragment (`--mod mymod`).
 - **`variants`** ist eine Liste, kein festes Survival/Creative-Paar. Ein Mod ohne
   Editionen hat eine Variante; der Importer klappt zwei identische Ordner zu einer
   namens `Default` zusammen.
@@ -149,7 +152,7 @@ Kommentare und nachgestellte Kommas sind in diesen Dateien erlaubt (der Parser
   bedeutet "für diesen Mod gibt es keinen im Log belegbaren Nachweis" und wird als
   solches ausgewiesen, statt ein leeres Muster als bestanden zu verbuchen.
 - **`stage2.visualQuestion`** stand früher fest im Skript, weshalb ein GUI-Lauf
-  jedes anderen Mods nach einem lila Kristallblock fragte.
+  jedes Mods nach dem Block eines bestimmten anderen Mods fragte.
 - **`profiles`** sind der Grund, dass niemand eine Kombination von Hand
   zusammenbauen muss. Explizite Argumente gewinnen weiterhin, ein Profil ist also
   auch ein Startpunkt.
@@ -163,7 +166,7 @@ einen Eintrag pro Mod/Version/Edition hielt und damit keine Historie hatte.
 Übernahme alter Bestätigungen:
 
 ```bash
-tb import --gui-verified E:\7DTD-Testbench\gui-verified.json --mod adamant
+tb import --gui-verified D:\7DTD-Bench\gui-verified.json --mod mymod
 ```
 
 Akzeptiert `EvidenceOk` und `AtlasOk`, weil beide Schreibweisen in der Datei

@@ -7,8 +7,8 @@ Einen Mod gegen mehrere Spielversionen testen, ohne die Live-Modlist
 
 | # | Was | Wie isoliert |
 |---|---|---|
-| 1 | Spielinstallation | eigene Kopie pro Version unter `E:\Games\7DTD-<version>` |
-| 2 | Saves / Config / Gears | `-UserDataFolder=E:\Games\_TestUserData\<version>` |
+| 1 | Spielinstallation | eigene Kopie pro Version unter `D:\7DTD-Bench\Games\7DTD-<version>` |
+| 2 | Saves / Config / Gears | `-UserDataFolder=D:\7DTD-Bench\Games\_TestUserData\<version>` |
 | 3 | **GamePrefs** | `reg export` vor dem Lauf, `reg import` danach |
 | 4 | Fremdmods | `Dependencies` spiegelt Gears/Quartz vor jedem Lauf hinein, alles uebrige wandert nach `_Mods-deaktiviert` |
 
@@ -23,7 +23,7 @@ Live-Settings (`DynamicMeshDistance`, `DynamicMeshUseImposters`,
 Beweis, falls jemand zweifelt: ein Start mit brandneuem, leerem
 UserDataFolder loggt trotzdem `Last played version: V 3.0.1`.
 
-Referenzstand der getunten Werte: `E:\Backup\7DTD-Prefs\prefs_golden.reg`
+Referenzstand der getunten Werte: `D:\7DTD-Bench\prefs-backup\prefs_golden.reg`
 (`DynamicMeshDistance 1000`, `UseImposters 1`, `TexQuality 1`,
 `ViewDistance 5`). Jedes Skript hier sichert und stellt wieder her - **wer
 etwas Neues baut, das das Spiel startet, muss das genauso machen.**
@@ -61,7 +61,7 @@ anderen Mod **nicht diese Datei umschreiben**, sondern eine eigene
 Konfiguration mitgeben:
 
     .\Invoke-SmokeTest.ps1 -Version 3.0.1 `
-        -ConfigPath C:\Users\sourc\7D2D-7DashesToDie\test\Testbench.SevenDashes.psd1
+        -ConfigPath D:\Mods\MyMod\test\Testbench.SevenDashes.psd1
 
 Der Ordnername im Mods-Verzeichnis ist der Quellordner; der Name, auf den die
 Zeile `[MODS] Loaded Mod: <name>` geprueft wird, kommt aus `<Name>` der
@@ -75,7 +75,7 @@ nach `Mods\<Name>` gespiegelt werden und vom Aufraeumschritt nie angefasst
 werden:
 
     Dependencies = @(
-        @{ Name = '0-Quartz'    ; Source = 'C:\Modlists\Smorgasbord\mods\Quartz\0-Quartz' }
+        @{ Name = '0-Quartz'    ; Source = 'C:\Modlists\MyList\mods\Quartz\0-Quartz' }
         @{ Name = '00000-Gears' ; Source = 'C:\Modlists\...\00000-Gears' }
     )
 
@@ -109,7 +109,7 @@ Der Report unter `results\matrix_*.md` enthaelt am Ende die fertige
 
 ## Eine neue Spielversion aufnehmen
 
-1. Installation nach `E:\Games\7DTD-<version>` besorgen (siehe unten).
+1. Installation nach `D:\7DTD-Bench\Games\7DTD-<version>` besorgen (siehe unten).
 2. Version in `Testbench.psd1` unter `Versions` eintragen.
 3. `Invoke-SmokeTest.ps1 -Version <version>` laufen lassen.
 4. Marker gegenpruefen: kommt `INF StartGame done` im Log vor? Falls TFP den
@@ -119,7 +119,7 @@ Der Report unter `results\matrix_*.md` enthaelt am Ende die fertige
 
 **Variante A - Steam-Branch (ohne Zusatzwerkzeug, aber umstaendlich):**
 Steam-Branch auf die Zielversion stellen, den Ordner
-`C:\Steam\steamapps\common\7 Days To Die` nach `E:\Games\7DTD-<version>`
+`C:\Steam\steamapps\common\7 Days To Die` nach `D:\7DTD-Bench\Games\7DTD-<version>`
 kopieren, Branch zurueckstellen, danach "Dateien ueberpruefen". Nachteil: die
 Live-Installation wird zwischendurch angefasst, und MO2 darf in der Zeit nicht
 starten.
@@ -129,7 +129,7 @@ laedt einen Branch direkt in einen Zielordner, ohne die Steam-Installation
 anzufassen.
 
     dotnet tool install -g DepotDownloader
-    DepotDownloader -app 251570 -depot 251576 -branch v3.1.0 -dir E:\Games\7DTD-3.1.0 -username <dein-steam-name>
+    DepotDownloader -app 251570 -depot 251576 -branch v3.1.0 -dir D:\7DTD-Bench\Games\7DTD-3.1.0 -username <dein-steam-name>
 
 Steam fragt dann nach Passwort und Steam-Guard-Code - das gibst du selbst ein.
 
@@ -174,6 +174,6 @@ Faelle als "nur Stufe 1 bestanden" aus, statt sie stillschweigend
 mitzuschleppen.
 
 `Start-Gui.ps1` loest die versionsspezifische
-`E:\Games\7DTD-3.0.0\Start-Test.bat` ab - eine Datei fuer alle Versionen. Die
+`D:\7DTD-Bench\Games\7DTD-3.0.0\Start-Test.bat` ab - eine Datei fuer alle Versionen. Die
 alte `.bat` funktioniert weiter, muesste aber pro Installation kopiert und
 angepasst werden.
