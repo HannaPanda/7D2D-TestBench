@@ -58,7 +58,9 @@ jobs:
           # every download afterwards benefits from.
           New-Item -ItemType Directory -Force -Path publish\examples | Out-Null
           Copy-Item examples\*.json publish\examples\
-          Copy-Item README.md, LIESMICH-ZUERST.txt publish\ -ErrorAction SilentlyContinue
+          # LICENSE is not optional in the ZIP: MIT only permits redistribution
+          # with the notice attached, and that includes my own.
+          Copy-Item README.md, LIESMICH-ZUERST.txt, LICENSE publish\
 
           Remove-Item publish\*.pdb -ErrorAction SilentlyContinue
 

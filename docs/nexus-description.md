@@ -94,6 +94,16 @@ play, it would take your modlist apart. The tool locates your live installation
 specifically in order to refuse it, in `tb doctor` and in the run itself, but keep
 your test installations separate anyway.
 
+## Licence
+
+MIT. Use it, change it, ship it inside your own thing, commercially too; all you
+have to keep is the copyright notice. No warranty, which for a tool that rearranges
+game installations and writes to the registry is the honest position rather than
+boilerplate.
+
+Translations and bug reports are welcome. The language files are plain JSON, one
+per language, and a pull request that adds one is the whole contribution.
+
 ## Source and issues
 
 https://github.com/HannaPanda/7D2D-TestBench

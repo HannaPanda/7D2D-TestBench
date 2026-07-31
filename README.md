@@ -173,6 +173,16 @@ Es beantwortet keine Sichtprüfung. Ein Agent kann einen GUI-Lauf vorbereiten un
 starten, aber ob etwas richtig aussieht und sich richtig anfühlt, kann kein
 Logmuster ersetzen.
 
+## Lizenz
+
+[MIT](LICENSE). Benutzen, ändern, weitergeben, auch in etwas Eigenem und auch
+kommerziell; drinbleiben muss nur der Copyright-Hinweis. Ohne Gewährleistung, was
+bei einem Werkzeug, das Spielinstallationen umbaut und in der Registry
+herumschreibt, kein Kleingedrucktes ist, sondern der Grund für `tb doctor`.
+
+Übersetzungen, Fehlerberichte und Fallen, die hier noch fehlen, sind willkommen:
+[Issues](https://github.com/HannaPanda/7D2D-TestBench/issues).
+
 ## Weiterlesen
 
 - [`docs/conventions/traps.md`](docs/conventions/traps.md) - die Fallen, die dieses

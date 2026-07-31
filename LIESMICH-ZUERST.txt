@@ -37,6 +37,9 @@ Alles weitere: README.md, und im Zweifel
 
     tb.exe doctor
 
+Lizenz: MIT, siehe LICENSE. Benutzen, aendern, weitergeben, auch in etwas
+Eigenem; drinbleiben muss nur der Copyright-Hinweis. Ohne Gewaehrleistung.
+
 -----------------------------------------------------------------------------
 
 English

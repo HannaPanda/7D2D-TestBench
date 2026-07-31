@@ -6,7 +6,9 @@
     <Version>1.0.0</Version>
     <Product>7DTD Multiversion Testbench</Product>
     <Authors>HannaPanda</Authors>
+    <Copyright>Copyright (c) 2026 Johanna Marie Schenk</Copyright>
     <RepositoryUrl>https://github.com/HannaPanda/7D2D-TestBench</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
 </Project>
