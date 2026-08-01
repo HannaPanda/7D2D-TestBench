@@ -278,6 +278,8 @@
   "cli.status.active": "Active: {0} is doing '{1}' since {2} (PID {3}).",
   "cli.status.pendingHint": "{0} visual check(s) open. tb status --pending",
   "cli.status.noRuns": "No run stored yet.",
+  "cli.status.noRunsForMod": "No run stored for '{0}' yet.",
+  "cli.status.noPending": "No visual check is waiting.",
 
   "cli.verify.visualMissing": "--visual ok|fail is missing.",
   "cli.verify.visualUnknown": "--visual '{0}' is not something I know. ok or fail.",

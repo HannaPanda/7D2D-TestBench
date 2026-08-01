@@ -122,7 +122,26 @@ public static class RunCommands
         var store = ctx.Store;
         var limit = ctx.Args.GetInt("limit") ?? 15;
 
-        var runs = ctx.Args.Get("mod") is { } modId ? store.ForMod(modId) : store.All();
+        // --mod takes a fragment here exactly as it does in run and report. Without
+        // this the filter compared literally and an unmatched one produced an empty
+        // table plus "no run stored yet" - indistinguishable from an empty store.
+        string? modId = null;
+        if (ctx.Args.Get("mod") is { } wanted)
+        {
+            var known = ConfigStore.LoadRegisteredMods(ctx.Machine, out _)
+                .Select(m => m.Config.ModId)
+                .Concat(store.ModIds())
+                .ToList();
+            var matches = ConfigStore.MatchModIds(known, wanted);
+            if (matches.Count > 1)
+                throw new ConfigException(Loc.T("error.modAmbiguous", wanted, string.Join(", ", matches)));
+            if (matches.Count == 0)
+                throw new ConfigException(Loc.T("error.noSuchMod", wanted,
+                    known.Count == 0 ? Loc.T("error.noneRegistered") : string.Join(", ", known.Distinct(StringComparer.OrdinalIgnoreCase))));
+            modId = matches[0];
+        }
+
+        var runs = modId is null ? store.All() : store.ForMod(modId);
         if (ctx.Args.Flag("pending")) runs = runs.Where(r => r.Visual == VisualState.Pending).ToList();
         var shown = runs.Take(limit).ToList();
 
@@ -148,11 +167,18 @@ public static class RunCommands
         if (pending.Count > 0 && !ctx.Args.Flag("pending"))
             ctx.Out.Warn(Loc.T("cli.status.pendingHint", pending.Count));
 
-        if (rows.Count == 0) ctx.Out.Info(Loc.T("cli.status.noRuns"));
+        // An empty table has three different reasons, and saying "no run stored yet"
+        // for all of them is how a filter that matched nothing passes for a store
+        // that holds nothing.
+        if (rows.Count == 0)
+            ctx.Out.Info(ctx.Args.Flag("pending") ? Loc.T("cli.status.noPending")
+                : modId is not null ? Loc.T("cli.status.noRunsForMod", modId)
+                : Loc.T("cli.status.noRuns"));
 
         return ctx.Out.Finish("status", ExitCodes.Ok, new
         {
             active = holder,
+            mod = modId,
             pendingVisual = pending.Count,
             runs = shown.Select(Describe),
         });

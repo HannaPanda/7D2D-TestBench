@@ -278,6 +278,8 @@
   "cli.status.active": "Aktiv: {0} macht '{1}' seit {2} (PID {3}).",
   "cli.status.pendingHint": "{0} Sichtpruefung(en) offen. tb status --pending",
   "cli.status.noRuns": "Noch kein Lauf gespeichert.",
+  "cli.status.noRunsForMod": "Noch kein Lauf fuer '{0}' gespeichert.",
+  "cli.status.noPending": "Es wartet keine Sichtpruefung.",
 
   "cli.verify.visualMissing": "--visual ok|fail fehlt.",
   "cli.verify.visualUnknown": "--visual '{0}' kenne ich nicht. ok oder fail.",

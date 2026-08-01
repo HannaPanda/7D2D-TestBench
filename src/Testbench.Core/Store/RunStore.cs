@@ -65,6 +65,18 @@ public sealed class RunStore
     public List<RunRecord> ForMod(string modId) =>
         All().Where(r => string.Equals(r.ModId, modId, StringComparison.OrdinalIgnoreCase)).ToList();
 
+    /// <summary>
+    /// Every mod id the store knows about. Not the same set as the registered mods:
+    /// a mod can be unregistered and still have a history worth looking at, and a
+    /// registered mod can have no runs yet. A --mod filter is resolved against the
+    /// union of both, so neither case looks like a typo.
+    /// </summary>
+    public List<string> ModIds() =>
+        All().Select(r => r.ModId)
+             .Distinct(StringComparer.OrdinalIgnoreCase)
+             .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
+             .ToList();
+
     /// <summary>GUI runs that finished but nobody has answered the visual question for.</summary>
     public List<RunRecord> PendingVisual() =>
         All().Where(r => r.Visual == VisualState.Pending).ToList();

@@ -277,6 +277,8 @@
   "cli.status.active": "Actif : {0} fait '{1}' depuis {2} (PID {3}).",
   "cli.status.pendingHint": "{0} verification(s) visuelle(s) en attente. tb status --pending",
   "cli.status.noRuns": "Aucune execution enregistree pour l'instant.",
+  "cli.status.noRunsForMod": "Aucune execution enregistree pour '{0}' pour l'instant.",
+  "cli.status.noPending": "Aucune verification visuelle en attente.",
 
   "cli.verify.visualMissing": "--visual ok|fail manque.",
   "cli.verify.visualUnknown": "--visual '{0}' : je ne connais pas. ok ou fail.",

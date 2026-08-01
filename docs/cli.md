@@ -156,6 +156,15 @@ tb status --pending
 ```
 
 ```bash
+tb status --mod mymod --limit 5
+```
+
+`--mod` takes a unique fragment here too, the same rule `run` and `report` use, and an
+unknown one is an error rather than an empty table: "no run stored yet" has to keep
+meaning that the store is empty. An empty result says which of the three reasons it
+was - no runs at all, none for this mod, or no visual check waiting.
+
+```bash
 tb verify --run 20260731-222549_mymod_3.0.1_gui --visual ok --note "controller line is there, double tap dashes"
 ```
 

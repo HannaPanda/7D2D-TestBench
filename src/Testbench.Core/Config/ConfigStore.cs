@@ -158,21 +158,35 @@ public static class ConfigStore
         }
 
         var mods = LoadRegisteredMods(machine, out var missing);
-        var hit = mods.FirstOrDefault(m => string.Equals(m.Config.ModId, modIdOrPath, StringComparison.OrdinalIgnoreCase));
-        if (hit.Config is not null) return hit;
-
-        // An unambiguous fragment is enough. Mod ids come from ModInfo.xml and are
-        // long ("sevendashestodie"); requiring the full string would put exactly
-        // the kind of typing back that this tool removes.
-        var partial = mods.Where(m => m.Config.ModId.Contains(modIdOrPath, StringComparison.OrdinalIgnoreCase)).ToList();
-        if (partial.Count == 1) return partial[0];
-        if (partial.Count > 1)
-            throw new ConfigException(I18n.Loc.T("error.modAmbiguous", modIdOrPath,
-                string.Join(", ", partial.Select(m => m.Config.ModId))));
+        var matches = MatchModIds(mods.Select(m => m.Config.ModId), modIdOrPath);
+        if (matches.Count == 1)
+            return mods.First(m => string.Equals(m.Config.ModId, matches[0], StringComparison.OrdinalIgnoreCase));
+        if (matches.Count > 1)
+            throw new ConfigException(I18n.Loc.T("error.modAmbiguous", modIdOrPath, string.Join(", ", matches)));
 
         var known = mods.Count == 0 ? I18n.Loc.T("error.noneRegistered") : string.Join(", ", mods.Select(m => m.Config.ModId));
         var note = missing.Count > 0 ? " " + I18n.Loc.T("error.goneMissing", string.Join(", ", missing)) : "";
         throw new ConfigException(I18n.Loc.T("error.noSuchMod", modIdOrPath, known) + note);
+    }
+
+    /// <summary>
+    /// The single place that decides what "--mod seven" means: an exact id wins,
+    /// otherwise every id containing the fragment. Mod ids come from ModInfo.xml
+    /// and are long ("sevendashestodie"); requiring the full string would put
+    /// exactly the kind of typing back that this tool removes.
+    ///
+    /// Shared so that no command can quietly disagree with the others about it.
+    /// `tb status --mod seven` used to compare literally and answer "no run stored
+    /// yet" for a store that held three - the same wording it uses for a genuinely
+    /// empty store, which is the worst possible way to be wrong.
+    /// </summary>
+    public static List<string> MatchModIds(IEnumerable<string> ids, string fragment)
+    {
+        var all = ids.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var exact = all.FirstOrDefault(id => string.Equals(id, fragment, StringComparison.OrdinalIgnoreCase));
+        return exact is not null
+            ? new List<string> { exact }
+            : all.Where(id => id.Contains(fragment, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     private static void Validate(MachineConfig cfg, string path)

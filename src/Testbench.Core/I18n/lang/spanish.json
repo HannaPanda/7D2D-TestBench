@@ -277,6 +277,8 @@
   "cli.status.active": "Activo: {0} esta haciendo '{1}' desde las {2} (PID {3}).",
   "cli.status.pendingHint": "{0} revision(es) visual(es) pendientes. tb status --pending",
   "cli.status.noRuns": "Todavia no hay ninguna ejecucion guardada.",
+  "cli.status.noRunsForMod": "Todavia no hay ninguna ejecucion guardada para '{0}'.",
+  "cli.status.noPending": "No hay ninguna revision visual pendiente.",
 
   "cli.verify.visualMissing": "Falta --visual ok|fail.",
   "cli.verify.visualUnknown": "--visual '{0}' no lo conozco. ok o fail.",
