@@ -228,3 +228,43 @@ build at registration time (`versions[].build`), and the `INF Version:` line of 
 last real run, the only one of the three that cannot be a mix-up of names.
 `tb doctor` puts them side by side. `tb versions scan` does not register a folder
 whose name contradicts its build without `--force`.
+
+## 17. Stage 2 sees the shutdown, stage 1 never does
+
+A headless run ends at `readyPattern` and the process is stopped there, so it never
+reaches the game's teardown. A GUI run ends because a human closes the window, which
+runs the full shutdown sequence. That is a section of the log stage 1 has never
+produced, and `ignorePatterns` grew on stage 1 logs alone.
+
+On a Steam build the teardown emits, after `Persistent GamePrefs saved`:
+
+    ERR [HResult] FAILED (0x89235208 = E_XBL_NOT_INITIALIZED) Uninitialize Xbox Live.
+
+Xbox Live was never initialized, so uninitializing it fails. No mod can influence
+that line, and it appears on every normally closed GUI run.
+
+The consequence is worse than one stray error. `LogAnalyzer.Determine` returns
+`Errors` as soon as `Errors > 0`, and `ReportBuilder` tests `gui.Status !=
+RunStatus.Ok` **before** it looks at `Visual` at all. A human could therefore
+confirm a visual check perfectly and the version would still never reach a
+compatibility list - with a note about the status that says nothing about what was
+actually looked at.
+
+Why this stayed invisible until now: the only GUI runs in the store with status `Ok`
+were records imported from the old bench, which carry no counters
+(`analysis.totalLines: 0`). The first GUI run that actually went through the
+analyzer was the one that found this.
+
+Two rules come out of it:
+
+- **Teardown noise belongs in `ignorePatterns`, narrowly.** The pattern is
+  `E_XBL_NOT_INITIALIZED`, not `[HResult]` and not `[XBL]` - trap 10 still holds, and
+  everything else under those prefixes stays visible.
+- **A missing Steam client does not.** Starting the game without a running Steam
+  client produces, right after `[Analytics] Failed to find current Steam Branch`:
+
+      System.InvalidOperationException: Steamworks is not initialized.
+
+  That exception is the only sign in the log that a run began in a degraded
+  environment, and it must keep counting. `TestRunner` warns about it before the
+  start; the warning is there to be read, not to be filtered away afterwards.

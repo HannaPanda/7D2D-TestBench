@@ -19,7 +19,7 @@ the reference for the parity proof and are not maintained any more.
 - [`docs/architecture/config-schema.md`](docs/architecture/config-schema.md) - the
   three configuration levels, every field, and which of them are traps.
 - [`docs/conventions/traps.md`](docs/conventions/traps.md) - **the most important
-  file.** Sixteen traps, all of them paid for. Before any change to deploy, prefs,
+  file.** Seventeen traps, all of them paid for. Before any change to deploy, prefs,
   launcher or analyzer, read the matching paragraph.
 - [`docs/cli.md`](docs/cli.md) - verbs, options, exit codes, `--json`.
 - [`docs/i18n.md`](docs/i18n.md) - how texts are translated, and the rule that every
