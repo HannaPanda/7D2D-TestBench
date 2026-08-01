@@ -95,14 +95,28 @@ The structure `tb init` creates:
 2. **`--visual ok` is set only by a human who looked.** An agent uses
    `--visual defer`. Headless executes nothing graphical and nothing input related; log
    evidence cannot replace a visual check.
-3. **One run at a time.** `RunLock` is machine-wide. Do not work around it.
-4. **The live installation and the modlist are not modified.** Writing happens only
+3. **The human decides how much testing is enough - the tool only reports.** Missing
+   evidence, a stage that was not reached, a version checked less thoroughly than its
+   siblings: all of that is a *finding*, not a veto. The author may weigh it and declare
+   a version tested anyway, and a release then says "tested" without a footnote. This is
+   deliberate. These are unpaid hobby mods; a rule that makes every minor build a full
+   manual pass over every feature does not produce more correctness, it produces fewer
+   releases. What an **agent** may never do is make that call, or quietly widen a list
+   because the risk "looks small" - it reports the gap plainly, once, and then follows
+   the decision without relitigating it.
+4. **One run at a time.** `RunLock` is machine-wide. Do not work around it.
+5. **The live installation and the modlist are not modified.** Writing happens only
    into `gameRoot` installations and `userDataRoot`.
-5. **No counter is "cleaned up" without looking at the parity tests.** The expected
+6. **No counter is "cleaned up" without looking at the parity tests.** The expected
    values in `LogAnalyzerParityTests` come from the old PowerShell logic on the same
    files. Changing them changes what gets reported as tested.
-6. **Trap comments in the code stay where they are.** They are the safeguard, not
+7. **Trap comments in the code stay where they are.** They are the safeguard, not
    decoration.
+
+Rules 2 and 3 are not in tension, and it is worth saying why: an agent cannot see, so it
+may not judge - and the author can see, so she may. Weakening an *evidence pattern* to make
+a report turn green is a different thing entirely and stays forbidden: that bends the
+instrument instead of overruling it, and the next run then measures nothing.
 
 ## The GUI
 
