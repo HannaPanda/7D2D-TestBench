@@ -35,11 +35,23 @@ public sealed class VersionScannerTests : IDisposable
     public void Identity_version_decodes_to_the_game_version(string build, string expected) =>
         Assert.Equal(expected, VersionScanner.IdFromBuild(build));
 
+    /// <summary>
+    /// Below major 3 the game writes the minor as one number, so the same encoding
+    /// that means 3.1.0 up there means 2.6 down here. Splitting it anyway produced
+    /// "2.0.6" for a real V 2.6 installation - see trap 16.
+    /// </summary>
+    [Theory]
+    [InlineData("1.206.14.0", "2.6")]
+    [InlineData("1.200.30.0", "2.0")]
+    [InlineData("1.100.333.0", "1.0")]
+    public void Below_major_three_the_minor_is_not_split(string build, string expected) =>
+        Assert.Equal(expected, VersionScanner.IdFromBuild(build));
+
     [Theory]
     [InlineData("1.3010.4.0")]   // four digits: the scheme does not say what that means
     [InlineData("1.30.4.0")]     // two digits either
     [InlineData("")]
-    [InlineData("irgendwas")]
+    [InlineData("anything")]
     public void An_unknown_build_shape_gives_no_version_instead_of_a_guess(string build) =>
         Assert.Null(VersionScanner.IdFromBuild(build));
 

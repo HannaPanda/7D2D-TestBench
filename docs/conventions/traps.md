@@ -211,17 +211,37 @@ Inside an installation the number is nowhere to be found as text:
 `Assembly-CSharp.dll` assembles the string at runtime, and a search for `3.0.1`
 across the whole folder finds nothing but EAC and Steam logs. What does exist is
 the identity version in `MicrosoftGame.Config`, shipped as
-`1.<major><minor><patch>.<build>`:
+`1.<major><minor, two digits>.<build>.0`:
 
-| Version | Identity |
-|---|---|
-| 3.0.0 | `1.300.259.0` |
-| 3.0.1 | `1.301.4.0` |
-| 3.1.0 | `1.310.14.0` |
+| Version | Identity | Major | Minor |
+|---|---|---|---|
+| 3.0.0 | `1.300.259.0` | 3 | 0 |
+| 3.0.1 | `1.301.4.0` | 3 | 1 |
+| 3.1.0 | `1.310.14.0` | 3 | 10 |
+| 2.6 | `1.206.14.0` | 2 | 6 |
 
-`VersionScanner.IdFromBuild` reads the three-digit middle and nothing else. Any
-other shape returns `null` rather than a plausible-looking wrong answer; the folder
-name then takes over, and the line says that this was a guess.
+**The middle is not three separate components.** Look at the last two rows: the
+same encoding gives `3.1.0` and `2.6`, because how the minor is written out is a
+rule inside the game and it changes with the major. `VersionInformation`'s
+constructor:
+
+```csharp
+if (releaseType == Alpha || (releaseType == V && major < 3))
+    "V {Major}.{Minor} (b{Build})"                   // V 2.6 (b14)
+else
+    "V {Major}.{Minor / 10}.{Minor % 10} (b{Build})" // V 3.0.1 (b4)
+```
+
+This trap has been paid for twice. `IdFromBuild` first split all three digits
+unconditionally, which is right for the 3.x line and wrong below it: a freshly
+downloaded V 2.6 was decoded as "2.0.6" and refused registration for contradicting
+its own folder, and `--force` would have written a version into the config that has
+never existed. The fix mirrors the game's rule rather than approximating it - if
+the game changes it again, this is the place.
+
+Any shape other than the three-digit middle returns `null` rather than a
+plausible-looking wrong answer; the folder name then takes over, and the line says
+that this was a guess.
 
 That is why there are three statements and one comparison: the registered id, the
 build at registration time (`versions[].build`), and the `INF Version:` line of the

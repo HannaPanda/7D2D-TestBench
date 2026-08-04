@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
@@ -115,8 +116,10 @@ public static class VersionScanner
     /// <summary>
     /// The version is not written as plain text anywhere in an installation
     /// (Assembly-CSharp.dll builds the string at runtime). MicrosoftGame.Config
-    /// is: its Identity version encodes the version as 1.&lt;major&gt;&lt;minor&gt;&lt;patch&gt;.&lt;build&gt;,
-    /// so 3.0.1 ships as "1.301.4.0" and 3.1.0 as "1.310.14.0".
+    /// is: its Identity version encodes the version as
+    /// 1.&lt;major&gt;&lt;minor, two digits&gt;.&lt;build&gt;.0, so 3.0.1 ships as
+    /// "1.301.4.0", 3.1.0 as "1.310.14.0" and 2.6 as "1.206.14.0". How that minor
+    /// is written out is a rule of the game's own, see <see cref="IdFromBuild"/>.
     /// </summary>
     public const string GameConfigName = "MicrosoftGame.Config";
 
@@ -227,14 +230,37 @@ public static class VersionScanner
     }
 
     /// <summary>
-    /// "1.301.4.0" to "3.0.1". Only the three-digit form is decoded; anything
-    /// else returns null instead of a plausible-looking wrong answer, and the
-    /// folder name takes over.
+    /// "1.301.4.0" to "3.0.1", "1.206.14.0" to "2.6". The middle three digits are
+    /// the major digit followed by a two-digit minor - but whether that minor is
+    /// written as one number or split into two is the game's own rule, and it is
+    /// not the same on both lines. VersionInformation's constructor:
+    /// <code>
+    /// if (releaseType == Alpha || (releaseType == V &amp;&amp; major &lt; 3))
+    ///     "V {Major}.{Minor} (b{Build})"                  // V 2.6 (b14)
+    /// else
+    ///     "V {Major}.{Minor / 10}.{Minor % 10} (b{Build})" // V 3.0.1 (b4)
+    /// </code>
+    /// Splitting unconditionally is what the first version of this method did, and
+    /// it decoded V 2.6 as "2.0.6" - a version that has never existed, attached to
+    /// an installation that was really there. That is the failure this whole class
+    /// is here to prevent, so the rule is mirrored instead of approximated.
+    ///
+    /// Only the three-digit form is decoded; anything else returns null instead of
+    /// a plausible-looking wrong answer, and the folder name takes over.
     /// </summary>
     public static string? IdFromBuild(string build)
     {
-        var m = Regex.Match(build.Trim(), @"^\d+\.(\d)(\d)(\d)\.");
-        return m.Success ? $"{m.Groups[1].Value}.{m.Groups[2].Value}.{m.Groups[3].Value}" : null;
+        // [0-9] rather than \d: .NET's \d also matches non-ASCII digits, which
+        // int.Parse would then be handed.
+        var m = Regex.Match(build.Trim(), @"^[0-9]+\.([0-9])([0-9][0-9])\.");
+        if (!m.Success) return null;
+
+        var major = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+        var minor = int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+
+        return major >= 3
+            ? $"{major}.{minor / 10}.{minor % 10}"
+            : $"{major}.{minor}";
     }
 
     /// <summary>
