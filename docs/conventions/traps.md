@@ -288,3 +288,53 @@ Two rules come out of it:
   That exception is the only sign in the log that a run began in a degraded
   environment, and it must keep counting. `TestRunner` warns about it before the
   start; the warning is there to be read, not to be filtered away afterwards.
+
+## 18. `ScrollIntoView` from inside `CollectionChanged` kills the window mid-run
+
+The log list follows the run by scrolling to the last line whenever one is added.
+Written the obvious way, that is a process-wide crash:
+
+```csharp
+// WRONG - this is what shipped, and it took two lost runs to find
+((INotifyCollectionChanged)_vm.LogLines).CollectionChanged += (_, e) =>
+{
+    if (e.Action != NotifyCollectionChangedAction.Add) return;
+    if (LogList.Items.Count > 0) LogList.ScrollIntoView(LogList.Items[^1]);
+};
+```
+
+`ScrollIntoView` calls `OnBringItemIntoView`, which forces a **synchronous**
+`UpdateLayout()`. Doing that from inside `OnCollectionChanged` runs
+`VirtualizingStackPanel.MeasureChild` -> `ItemContainerGenerator.Verify()` at the one
+moment where the collection already holds the new item while the generator has not
+been told about it yet, because the notification for it is still being delivered -
+we are inside it. `Verify()` reports the mismatch:
+
+    System.InvalidOperationException: ItemsControl is inconsistent with its items source.
+    The accumulated count 5 differs from the actual count 6.
+
+Nothing catches it. It is raised on the dispatcher, inside a `DispatcherOperation`,
+so the `try/catch` around `RunAsync` never sees it and the process is terminated.
+
+**What that looks like from the outside is the expensive part**: the window vanishes
+the second a run starts, the game keeps running normally to the end, and the human
+tests a whole version by hand for nothing - no run record, no pending visual check,
+`tb report` unchanged. The log file in `results\` is complete, which makes it look
+like a bench that worked. It does not: `TestRunner.Run` never returned, so nothing
+was ever stored. Both times this happened the crash was two seconds into the run,
+long before anything interesting, and both times it was mistaken for the run
+"crashing at the end".
+
+**The rule: never force layout from inside a collection notification.** Queue it at
+`DispatcherPriority.Background` instead, and coalesce it - a tailed game log adds
+lines in bursts, and one queued scroll per line is hundreds of layout passes for one
+visible result. See `MainWindow.QueueScrollToEnd`.
+
+Two things worth knowing when this class of bug is suspected again:
+
+- **The evidence is in the Windows event log, not in ours.** `Application` /
+  `.NET Runtime` id 1026 carries the full stack including the offending line. A
+  crashed WPF process leaves nothing behind in `state\` by definition.
+- **`Dispatcher.BeginInvoke` is not a fix by itself.** The marshalling in
+  `MainViewModel.Dispatch` was already correct; every add really did happen on the
+  UI thread. Re-entrancy, not threading, is what breaks the generator.

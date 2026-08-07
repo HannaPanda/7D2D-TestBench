@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Testbench.Core.I18n;
 
 namespace Testbench.Gui;
@@ -27,11 +28,43 @@ public partial class MainWindow : Window
         ((INotifyCollectionChanged)_vm.LogLines).CollectionChanged += (_, e) =>
         {
             if (e.Action != NotifyCollectionChangedAction.Add) return;
-            if (AutoScroll.IsChecked != true) return;
-            if (LogList.Items.Count > 0) LogList.ScrollIntoView(LogList.Items[^1]);
+            QueueScrollToEnd();
         };
 
         if (_vm.ConfigProblem is not null) _vm.RunDoctor();
+    }
+
+    private bool _scrollQueued;
+
+    /// <summary>
+    /// Scrolls the log to the end, but never from inside the CollectionChanged
+    /// notification that asked for it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ <c>ScrollIntoView</c> forces a synchronous layout pass, and running that
+    /// from inside <c>OnCollectionChanged</c> executes
+    /// <c>ItemContainerGenerator.Verify()</c> at the one moment when the collection
+    /// already holds the new item and the generator has not been told about it yet.
+    /// It then reports "ItemsControl is inconsistent with its items source"
+    /// (accumulated count N vs actual N+1) as an <see cref="InvalidOperationException"/>
+    /// on the dispatcher, which nothing catches - the window is simply gone, mid-run,
+    /// with the game still up and no run record written. Queued at
+    /// <see cref="DispatcherPriority.Background"/> the notification has finished and
+    /// the generator has caught up.
+    ///
+    /// Coalesced, because a tailed game log adds lines in bursts and one queued
+    /// operation per line would be hundreds of layout passes for one visible result.
+    /// </remarks>
+    private void QueueScrollToEnd()
+    {
+        if (_scrollQueued) return;
+        _scrollQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            _scrollQueued = false;
+            if (AutoScroll.IsChecked != true) return;
+            if (LogList.Items.Count > 0) LogList.ScrollIntoView(LogList.Items[^1]);
+        });
     }
 
     private async void Run_Click(object sender, RoutedEventArgs e) => await _vm.RunAsync();
